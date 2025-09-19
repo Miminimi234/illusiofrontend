@@ -2,9 +2,9 @@ const fs = require('fs');
 const path = require('path');
 
 const videoFiles = [
-  'public/1.gif',
-  'public/2.gif', 
-  'public/3.gif',
+  'public/1.webm',
+  'public/2.webm', 
+  'public/3.webm',
   'public/4.gif',
   'public/Space_Time_Travel__Seamless_VJ_Loop_uhd_2533132_compressed.gif',
   'public/zodiac/aries.gif',

@@ -466,6 +466,9 @@ interface ForecastData {
   recommendation: 'STRONG_BUY' | 'BUY' | 'HOLD' | 'SELL' | 'STRONG_SELL';
   reasoning: string;
   price10mMove?: string; // Optional 10-minute price movement forecast
+  price1hMove?: string; // Optional 1-hour price movement forecast
+  expectedRange?: string; // Optional expected price range
+  upProbability?: number; // Optional probability of price going up
 }
 
 const calculateForecast = (token: any): ForecastData => {

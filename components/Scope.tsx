@@ -2024,8 +2024,8 @@ function InsightsColumn({
     
     confidence = clamp(confidence, 0, 100);
     
-    // Use AI forecast data if available, otherwise fallback to dynamic calculation
-    const price10mMove = aiForecast?.price10mMove || (() => {
+    // Calculate price movement prediction dynamically
+    const price10mMove = (() => {
       if (!priceUsd) return "N/A";
       
       // Calculate volatility based on real metrics
@@ -2057,7 +2057,7 @@ function InsightsColumn({
       return `±${finalVolatility.toFixed(1)}%`;
     })();
     
-    const price1hMove = aiForecast?.price1hMove || (() => {
+    const price1hMove = (() => {
       if (!priceUsd) return "N/A";
       
       // Calculate 1h volatility based on 10m volatility (typically 3-4x higher)
@@ -2091,7 +2091,7 @@ function InsightsColumn({
     
     // Calculate expected range based on token characteristics
     const getExpectedRange = () => {
-      if (aiForecast?.expectedRange) return aiForecast.expectedRange;
+      // Calculate expected range dynamically
       
       let baseRange = 5.0; // Base expected range
       
@@ -2124,7 +2124,7 @@ function InsightsColumn({
     const expectedRange = getExpectedRange();
     
     // Calculate up probability based on real metrics and token characteristics
-    const upProbability = aiForecast?.upProbability || (() => {
+    const upProbability = (() => {
       let prob = 50; // Base probability
       
       // Market cap adjustments (most important factor)

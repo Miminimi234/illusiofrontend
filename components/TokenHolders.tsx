@@ -631,7 +631,7 @@ export default function TokenHolders({ selectedToken, onHoldersUpdate }: TokenHo
     return 'bg-blue-500/20 border-blue-500/30';
   };
 
-  if (!searchQuery.trim()) {
+  if (!selectedToken) {
     return (
       <div className="h-full flex items-center justify-center text-white/40">
         <div className="text-center">
@@ -649,7 +649,7 @@ export default function TokenHolders({ selectedToken, onHoldersUpdate }: TokenHo
         <div className="text-center text-white/60">
           <div className="animate-spin w-8 h-8 border-2 border-white/20 border-t-blue-400 rounded-full mx-auto mb-4"></div>
           <div className="text-lg">Analyzing tokens...</div>
-          <div className="text-sm text-white/40 mt-2">Searching for {searchQuery}</div>
+          <div className="text-sm text-white/40 mt-2">Searching for {selectedToken?.symbol || 'token'}</div>
         </div>
       </div>
     );
@@ -688,7 +688,7 @@ export default function TokenHolders({ selectedToken, onHoldersUpdate }: TokenHo
         <div className="text-center">
           <div className="animate-spin w-8 h-8 border-2 border-white/20 border-t-blue-400 rounded-full mx-auto mb-4"></div>
           <div className="text-lg mb-2">Loading holder data...</div>
-          <div className="text-sm">Fetching holders for: <span className="text-blue-300 font-mono">{searchQuery}</span></div>
+          <div className="text-sm">Fetching holders for: <span className="text-blue-300 font-mono">{selectedToken?.symbol || 'token'}</span></div>
         </div>
       </div>
     );

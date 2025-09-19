@@ -1,11 +1,4 @@
 # Large media files
-public/*.webm
-public/*.gif
-public/WIZZARD/
-public/zodiac/
-public/*.png
-public/*.jpg
-public/*.jpeg
 
 # Dependencies
 node_modules/

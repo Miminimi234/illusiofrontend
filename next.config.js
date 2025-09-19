@@ -8,6 +8,13 @@ const nextConfig = {
   generateBuildId: async () => {
     return 'build-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9)
   },
+  // Properly handle static assets and prevent Next.js from treating media files as pages
+  pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
+  // Ensure static assets are properly served
+  assetPrefix: '',
+  trailingSlash: false,
+  // Configure static file handling
+  staticPageGenerationTimeout: 60,
   // Proxy admin requests to Railway server
   async rewrites() {
     const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:8080';
@@ -58,6 +65,15 @@ const nextConfig = {
   },
   // Optimize bundle splitting for mobile route
   webpack: (config, { isServer }) => {
+    // Handle static assets properly
+    config.module.rules.push({
+      test: /\.(webm|mp4|gif|png|jpe?g|svg)$/i,
+      type: 'asset/resource',
+      generator: {
+        filename: 'static/media/[name].[hash][ext]'
+      }
+    });
+
     if (!isServer) {
       config.optimization.splitChunks = {
         ...config.optimization.splitChunks,

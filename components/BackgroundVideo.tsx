@@ -37,7 +37,7 @@ export default function BackgroundVideo({ isSlow = false, isOracleOpen = false }
         opacity: isLoaded ? 1 : 0,
         objectFit: 'cover'
       }}
-      src="/Space_Time_Travel__Seamless_VJ_Loop_uhd_2533132_compressed.gif"
+      src="/Space_Time_Travel__Seamless_VJ_Loop_uhd_2533132_compressed.webm"
       autoPlay
       muted
       loop

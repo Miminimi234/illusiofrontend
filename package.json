@@ -1,0 +1,41 @@
+{
+  "name": "quantum-geometry",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@metaplex-foundation/mpl-token-metadata": "^3.4.0",
+    "@pythnetwork/client": "^2.22.1",
+    "@solana/spl-token": "^0.1.8",
+    "@solana/web3.js": "^1.98.4",
+    "@tanstack/react-virtual": "^3.13.12",
+    "@types/node": "^20",
+    "@types/p5": "^1.7.6",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10.4.21",
+    "axios": "^1.12.2",
+    "bottleneck": "^2.19.5",
+    "firebase": "^12.3.0",
+    "framer-motion": "^12.23.14",
+    "lucide-react": "^0.542.0",
+    "next": "^14.2.32",
+    "p-queue": "^8.1.0",
+    "p5": "^1.11.10",
+    "postcss": "^8",
+    "react": "^18",
+    "react-dom": "^18",
+    "styled-jsx": "^5.1.7",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  },
+  "devDependencies": {
+    "eslint": "^8",
+    "eslint-config-next": "14.2.5"
+  }
+}

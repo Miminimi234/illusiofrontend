@@ -1,0 +1,379 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom scrollbar styles for Scope component */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* For Firefox */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1);
+}
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* Internet Explorer 10+ */
+  scrollbar-width: none;  /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar { 
+  display: none;  /* Safari and Chrome */
+}
+
+/* Companion video transparent background */
+.companion-video {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Force transparent background on companion orbs */
+.companion-video,
+.companion-video *,
+div[class*="companion"],
+div[class*="w-20 h-20 rounded-full"] {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Remove black backgrounds from WIZZARD videos */
+video[src*="WIZZARD"] {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+@font-face {
+  font-family: 'VT323';
+  src: url('/VT323-Regular.ttf') format('truetype');
+  font-display: swap;
+}
+
+:root {
+  --foreground-rgb: 255, 255, 255;
+  --background-start-rgb: 0, 0, 0;
+  --background-end-rgb: 0, 0, 0;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+  font-family: 'VT323', monospace;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  background: transparent;
+  font-family: 'VT323', monospace;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: transparent;
+  font-family: 'VT323', monospace;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Ensure VT323 font is applied to all text elements */
+h1, h2, h3, h4, h5, h6, p, span, div, button, input, textarea, label {
+  font-family: 'VT323', monospace;
+}
+
+/* Ensure token columns stay contained within viewport */
+.token-column-container {
+  max-height: calc(100vh - 200px) !important;
+  height: calc(100vh - 200px) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+/* Prevent any container overflow */
+.scope-container .flex.gap-6 {
+  max-height: 100% !important;
+  overflow: hidden !important;
+}
+
+/* Ensure cursor is always visible on Scope, Oracle, and Navigation pages */
+.scope-container,
+.scope-container *,
+.oracle-hub,
+.oracle-hub *,
+.navigation-hub,
+.navigation-hub * {
+  cursor: default !important;
+}
+
+/* Specific cursor styles for interactive elements */
+.scope-container button,
+.scope-container [role="button"],
+.scope-container input,
+.scope-container textarea,
+.scope-container select,
+.scope-container a,
+.scope-container .cursor-pointer,
+.scope-container .cursor-grab,
+.scope-container .cursor-grabbing,
+.oracle-hub button,
+.oracle-hub [role="button"],
+.oracle-hub input,
+.oracle-hub textarea,
+.oracle-hub select,
+.oracle-hub a,
+.oracle-hub .cursor-pointer,
+.oracle-hub .cursor-grab,
+.oracle-hub .cursor-grabbing,
+.navigation-hub button,
+.navigation-hub [role="button"],
+.navigation-hub input,
+.navigation-hub textarea,
+.navigation-hub select,
+.navigation-hub a,
+.navigation-hub .cursor-pointer,
+.navigation-hub .cursor-grab,
+.navigation-hub .cursor-grabbing {
+  cursor: inherit !important;
+}
+
+
+
+/* Prevent layout shifts and page movement */
+.scope-container {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Companion drag animations */
+.scope-container .scale-125 {
+  transform: scale(1.25) !important;
+  z-index: 50 !important;
+  transition: transform 0.2s ease-out !important;
+}
+
+/* Ensure hovered cards appear above other content */
+.scope-container .token-card:hover {
+  z-index: 10 !important;
+  transform: scale(1.02) !important;
+}
+
+/* Ensure proper stacking context for columns */
+.scope-container .token-column {
+  position: relative !important;
+  z-index: 0 !important;
+}
+
+
+
+/* Prevent input focus from causing layout shifts */
+.scope-container input:focus {
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5) !important;
+}
+
+/* Ensure chat input area has fixed dimensions */
+.chat-input-container {
+  height: 64px !important;
+  min-height: 64px !important;
+  max-height: 64px !important;
+}
+
+/* Messenger-style chat container */
+.messenger-chat-container {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-end !important;
+  min-height: 100% !important;
+}
+
+/* Ensure messages start from bottom and push up */
+.messenger-messages {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-end !important;
+  min-height: 100% !important;
+}
+
+/* Prevent jumping and ensure smooth webm button animations */
+.radial-video-buttons {
+  will-change: transform;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+.radial-video-buttons * {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+/* Smooth hover transitions */
+.radial-video-buttons button,
+.radial-video-buttons div {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Prevent transform conflicts */
+.radial-video-buttons .rotating-container {
+  transform-style: preserve-3d;
+  perspective: 1000px;
+}
+
+/* Ultra-smooth webm button animations */
+.radial-video-buttons .gif-button {
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  will-change: transform, opacity, filter;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+/* Prevent any jumping during hover */
+.radial-video-buttons .gif-button:hover {
+  transform: scale(1.02) translateZ(0);
+}
+
+/* Video transparency support for .gif files */
+video[src*=".gif"],
+video source[src*=".gif"] {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Ensure companion videos have no background */
+.companion-video,
+.companion-video video {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Force transparency on all video elements */
+video {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+
+/* Force all companion videos to use screen blend mode */
+.companion-video video,
+.companion-video img {
+  mix-blend-mode: screen !important;
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Ensure GIF files have transparent backgrounds */
+img[src*=".gif"] {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Smooth rotation container */
+.radial-video-buttons .rotating-container {
+  transition: transform 0.1s linear;
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+/* Mobile gating CSS fallback */
+/* Mobile gate removed - app now works on all screen sizes */
+
+/* Mobile styles - allow geometry background to show */
+@media (max-width: 768px) {
+  html, body, #app {
+    background-color: transparent !important;
+    color: #ffffff !important;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  html {
+    color-scheme: dark;
+  }
+}
+
+/* Glitch effect keyframes for ILLUSIO text */
+@keyframes illusio-glitch {
+  0% {
+    transform: translate(0);
+    filter: hue-rotate(0deg);
+  }
+  10% {
+    transform: translate(-2px, 2px);
+    filter: hue-rotate(90deg);
+  }
+  20% {
+    transform: translate(-2px, -2px);
+    filter: hue-rotate(180deg);
+  }
+  30% {
+    transform: translate(2px, 2px);
+    filter: hue-rotate(270deg);
+  }
+  40% {
+    transform: translate(2px, -2px);
+    filter: hue-rotate(360deg);
+  }
+  50% {
+    transform: translate(-2px, 2px);
+    filter: hue-rotate(45deg);
+  }
+  60% {
+    transform: translate(-2px, -2px);
+    filter: hue-rotate(135deg);
+  }
+  70% {
+    transform: translate(2px, 2px);
+    filter: hue-rotate(225deg);
+  }
+  80% {
+    transform: translate(2px, -2px);
+    filter: hue-rotate(315deg);
+  }
+  90% {
+    transform: translate(-2px, 2px);
+    filter: hue-rotate(45deg);
+  }
+  100% {
+    transform: translate(0);
+    filter: hue-rotate(0deg);
+  }
+}
+
+/* Glitch effect class for ILLUSIO text */
+.illusio-glitch-effect {
+  animation: illusio-glitch 0.1s infinite;
+  text-shadow: 
+    2px 0 0 #ff0000,
+    -2px 0 0 #00ffff,
+    0 2px 0 #00ff00,
+    0 -2px 0 #ffff00;
+  filter: hue-rotate(90deg) saturate(2) contrast(1.5);
+}
+

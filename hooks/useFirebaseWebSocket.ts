@@ -580,8 +580,6 @@ export const useFirebaseWebSocket = () => {
             // Only clear tokens if not in search mode
             if (!isSearchModeRef.current) {
               setTokens([]);
-            } else {
-              // Search mode - preserving current tokens
             }
             setConnectionStatus(prev => ({
               ...prev,

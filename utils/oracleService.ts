@@ -98,7 +98,7 @@ class OracleService {
       const nextAgent = agents[nextIndex];
       this.lastAgentIndex = nextIndex;
 
-      console.log(`🎯 Oracle generating message for: ${nextAgent}`);
+      // Generating oracle message
 
       // Generate contextual response
       const newMessage = await this.generateContextualResponse(nextAgent, messages);
@@ -127,7 +127,7 @@ class OracleService {
       const context = messages.slice(-3).map(msg => `${msg.agent}: ${msg.message}`).join('\n');
       
       const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:8080';
-      console.log('🔮 Oracle Service URL:', serverUrl);
+      // Using oracle service endpoint
       
       const response = await fetch(`${serverUrl}/api/grok/oracle/conversation`, {
         method: 'POST',

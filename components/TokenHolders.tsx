@@ -148,359 +148,42 @@ export default function TokenHolders({ selectedToken, onHoldersUpdate }: TokenHo
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch holders data from real API
+  // Fetch holders data using backend API
   const fetchHolders = async (mint: string) => {
-    // Show loading indicator during updates
     setHoldersLoading(true);
     try {
-      // Try multiple API endpoints for holder data
-      let holdersData: any[] = [];
+      console.log(`Fetching holders from backend API for ${mint}`);
       
-      // First try: Solscan API with different CORS proxy
-      try {
-        console.log(`Fetching holders from Solscan for ${mint}`);
-        const solscanResponse = await fetch(`https://cors-anywhere.herokuapp.com/https://api.solscan.io/token/holders?token=${mint}&limit=200`, {
-          headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-          }
-        });
-        
-        if (solscanResponse.ok) {
-          const solscanData = await solscanResponse.json();
-          console.log('Solscan response:', solscanData);
-          
-          if (solscanData.data && Array.isArray(solscanData.data)) {
-            holdersData = solscanData.data;
-            console.log(`Found ${holdersData.length} holders from Solscan`);
-          } else if (solscanData.items && Array.isArray(solscanData.items)) {
-            holdersData = solscanData.items;
-            console.log(`Found ${holdersData.length} holders from Solscan (items)`);
-          }
-        } else {
-          console.log('Solscan API failed:', solscanResponse.status, solscanResponse.statusText);
+      // Use the new backend API endpoint
+      const response = await fetch(`/api/tokens/holders?mint=${mint}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
         }
-      } catch (solscanError) {
-        console.log('Solscan API error:', solscanError);
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `API error: ${response.status} ${response.statusText}`);
       }
 
-      // Second try: Birdeye API (with API key for better data)
-      if (holdersData.length === 0) {
-        try {
-          console.log(`Fetching holders from Birdeye for ${mint}`);
-          const birdeyeResponse = await fetch(`https://public-api.birdeye.so/defi/v3/token/holder?address=${mint}&limit=100&ui_amount_mode=scaled`, {
-            headers: {
-              'X-API-KEY': process.env.NEXT_PUBLIC_BIRDEYE_API_KEY || '',
-              'accept': 'application/json',
-              'x-chain': 'solana'
-            }
-          });
-          if (birdeyeResponse.ok) {
-            const birdeyeData = await birdeyeResponse.json();
-            console.log('Birdeye response:', birdeyeData);
-            
-            if (birdeyeData.data && birdeyeData.data.items && Array.isArray(birdeyeData.data.items)) {
-              holdersData = birdeyeData.data.items;
-              console.log(`Found ${holdersData.length} holders from Birdeye`);
-            }
-          } else {
-            console.log('Birdeye API failed:', birdeyeResponse.status);
-          }
-        } catch (birdeyeError) {
-          console.log('Birdeye API error:', birdeyeError);
-        }
-      }
-
-      // Third try: DexScreener API (no CORS issues)
-      if (holdersData.length === 0) {
-        try {
-          console.log(`Fetching holders from DexScreener for ${mint}`);
-          const dexResponse = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${mint}`);
-          if (dexResponse.ok) {
-            const dexData = await dexResponse.json();
-            console.log('DexScreener response:', dexData);
-            
-            if (dexData.pairs && dexData.pairs.length > 0) {
-              // DexScreener doesn't have direct holders, but we can get pair info
-              const pair = dexData.pairs[0];
-              if (pair.holders) {
-                holdersData = pair.holders.map((holder: any) => ({
-                  address: holder.address,
-                  balance: holder.balance,
-                  percentage: holder.percentage,
-                  label: holder.label || ''
-                }));
-                console.log(`Found ${holdersData.length} holders from DexScreener`);
-              }
-            }
-          } else {
-            console.log('DexScreener API failed:', dexResponse.status);
-          }
-        } catch (dexError) {
-          console.log('DexScreener API error:', dexError);
-        }
-      }
-
-      // Fourth try: Helius RPC with getProgramAccounts
-      if (holdersData.length === 0) {
-        try {
-          console.log(`Fetching holders from Helius RPC for ${mint}`);
-          const heliusRpcResponse = await fetch(`https://mainnet.helius-rpc.com/?api-key=${process.env.NEXT_PUBLIC_HELIUS_API_KEY}`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              jsonrpc: '2.0',
-              id: 1,
-              method: 'getProgramAccounts',
-              params: [
-                'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA', // TOKEN_PROGRAM_ID
-                {
-                  encoding: 'jsonParsed',
-                  filters: [
-                    { dataSize: 165 }, // Token account size
-                    { 
-                      memcmp: { 
-                        offset: 0, 
-                        bytes: mint // Token mint address
-                      } 
-                    }
-                  ]
-                }
-              ]
-            })
-          });
-          
-          if (heliusRpcResponse.ok) {
-            const heliusRpcData = await heliusRpcResponse.json();
-            console.log('Helius RPC response:', heliusRpcData);
-            
-            if (heliusRpcData.result && Array.isArray(heliusRpcData.result)) {
-              holdersData = heliusRpcData.result.map((account: any) => ({
-                address: account.pubkey,
-                balance: account.account.data.parsed.info.tokenAmount.uiAmount || 0,
-                percentage: 0, // Will calculate later
-                owner: account.account.data.parsed.info.owner,
-                mint: account.account.data.parsed.info.mint,
-                firstTransaction: 0, // Will fetch separately
-                lastTransaction: 0, // Will fetch separately
-                transactionCount: 0 // Will fetch separately
-              }));
-              console.log(`Found ${holdersData.length} token accounts from Helius RPC`);
-            }
-          } else {
-            console.log('Helius RPC failed:', heliusRpcResponse.status);
-          }
-        } catch (heliusRpcError) {
-          console.log('Helius RPC error:', heliusRpcError);
-        }
-      }
-
-      // Fifth try: Helius API with correct token holders endpoint
-      if (holdersData.length === 0) {
-        try {
-          console.log(`Fetching holders from Helius for ${mint}`);
-          const heliusResponse = await fetch(`https://api.helius.xyz/v0/token-accounts?api-key=${process.env.NEXT_PUBLIC_HELIUS_API_KEY}`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              query: {
-                accounts: {
-                  mint: mint
-                }
-              }
-            })
-          });
-          
-          if (heliusResponse.ok) {
-            const heliusData = await heliusResponse.json();
-            console.log('Helius response:', heliusData);
-            
-            if (heliusData.result && Array.isArray(heliusData.result)) {
-              holdersData = heliusData.result.map((account: any) => ({
-                address: account.account,
-                balance: account.amount || 0,
-                percentage: 0,
-                owner: account.owner,
-                mint: mint
-              }));
-              console.log(`Found ${holdersData.length} holders from Helius`);
-            }
-          } else {
-            console.log('Helius API failed:', heliusResponse.status);
-          }
-        } catch (heliusError) {
-          console.log('Helius API error:', heliusError);
-        }
-      }
-
-      // Fifth try: Direct Solana RPC with getProgramAccounts (proper token holder query)
-      if (holdersData.length === 0) {
-        try {
-          console.log(`Trying direct Solana RPC with getProgramAccounts for ${mint}`);
-          const rpcResponse = await fetch('https://solana-api.projectserum.com/', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              jsonrpc: '2.0',
-              id: 1,
-              method: 'getProgramAccounts',
-              params: [
-                'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA', // TOKEN_PROGRAM_ID
-                {
-                  encoding: 'jsonParsed',
-                  filters: [
-                    { dataSize: 165 }, // Token account size
-                    { 
-                      memcmp: { 
-                        offset: 0, 
-                        bytes: mint // Token mint address
-                      } 
-                    }
-                  ]
-                }
-              ]
-            })
-          });
-          
-          if (rpcResponse.ok) {
-            const rpcData = await rpcResponse.json();
-            console.log('Solana RPC getProgramAccounts response:', rpcData);
-            
-            if (rpcData.result && Array.isArray(rpcData.result)) {
-              holdersData = rpcData.result.map((account: any) => ({
-                address: account.pubkey,
-                balance: account.account.data.parsed.info.tokenAmount.uiAmount || 0,
-                percentage: 0, // Will calculate later
-                owner: account.account.data.parsed.info.owner,
-                mint: account.account.data.parsed.info.mint
-              }));
-              console.log(`Found ${holdersData.length} token accounts from Solana RPC`);
-            }
-          } else {
-            console.log('Solana RPC failed:', rpcResponse.status);
-          }
-        } catch (rpcError) {
-          console.log('Solana RPC error:', rpcError);
-        }
-      }
-
-      // Fourth try: Skip broken server endpoint, go directly to Helius RPC
-
-      // Process the real data
-      if (holdersData.length > 0) {
-        // Calculate total supply for percentage calculation
-        const totalSupply = holdersData.reduce((sum: number, holder: any) => {
-          return sum + (holder.balance || holder.amount || holder.tokenAmount || 0);
-        }, 0);
-
-        // Process ALL holders for basic data (no API calls)
-        const allHolders: Holder[] = [];
-        
-        for (const holder of holdersData) {
-          const address = holder.address || holder.owner || holder.wallet;
-          const balance = holder.balance || holder.amount || holder.tokenAmount || 0;
-          
-          // Filter out invalid holders
-          if (!address || 
-              address === mint || 
-              address === tokenData?.mint ||
-              address.length <= 20 || 
-              address.includes('undefined') ||
-              address.includes('null') ||
-              balance <= 0) {
-            continue;
-          }
-
-          const percentage = totalSupply > 0 ? (balance / totalSupply) * 100 : (holder.percentage || holder.percent || 0);
-          
-          // Determine holder type based on real data
-          const isCreator = holder.isCreator || holder.isOwner || 
-                           (tokenData && address === tokenData.creator) ||
-                           (holder.label && holder.label.toLowerCase().includes('creator'));
-          
-          const isLiquidityPool = holder.isLiquidityPool || 
-                                holder.isPool || 
-                                (holder.label && (
-                                  holder.label.toLowerCase().includes('pool') ||
-                                  holder.label.toLowerCase().includes('liquidity') ||
-                                  holder.label.toLowerCase().includes('raydium') ||
-                                  holder.label.toLowerCase().includes('orca') ||
-                                  holder.label.toLowerCase().includes('jupiter') ||
-                                  holder.label.toLowerCase().includes('meteora') ||
-                                  holder.label.toLowerCase().includes('whirlpool')
-                                ));
-          
-          const isWhale = !isCreator && !isLiquidityPool && 
-                         (percentage > 4); // Only 4%+ holders are whales
-          
-          // Estimate first transaction based on token creation time
-          let firstTransaction = holder.firstTransaction || holder.firstTxTime || 0;
-          if (!firstTransaction && tokenData?.created_at) {
-            const tokenCreated = new Date(tokenData.created_at).getTime() / 1000;
-            const randomOffset = Math.random() * 86400; // Random 0-24 hours
-            firstTransaction = tokenCreated + randomOffset;
-          }
-          
-          allHolders.push({
-            address: address,
-            balance: balance,
-            percentage: percentage,
-            firstTransaction: firstTransaction,
-            lastTransaction: holder.lastTransaction || holder.lastTxTime || 0,
-            transactionCount: holder.transactionCount || holder.txCount || 0,
-            isCreator: isCreator,
-            isWhale: isWhale,
-            isLiquidityPool: isLiquidityPool
-          });
-        }
-
-        // Sort by percentage descending
-        allHolders.sort((a, b) => b.percentage - a.percentage);
-
-        // ONLY fetch transaction history for top 25 holders (the ones that will be displayed)
-        const processedHolders: Holder[] = [];
-        
-        for (let i = 0; i < Math.min(25, allHolders.length); i++) {
-          const holder = allHolders[i];
-          
-          // Fetch transaction history ONLY for the 25 displayed holders
-          const txHistory = await fetchHolderTransactionHistory(holder.address);
-          
-          processedHolders.push({
-            address: holder.address,
-            balance: holder.balance,
-            percentage: holder.percentage,
-            firstTransaction: txHistory.firstTransaction || holder.firstTransaction || 0,
-            lastTransaction: txHistory.lastTransaction || holder.lastTransaction || 0,
-            transactionCount: txHistory.transactionCount || holder.transactionCount || 0,
-            isCreator: holder.isCreator,
-            isWhale: holder.isWhale,
-            isLiquidityPool: holder.isLiquidityPool
-          });
-        }
-
-        // Add remaining holders WITHOUT fetching transaction history (for total count only)
-        for (let i = 25; i < allHolders.length; i++) {
-          processedHolders.push(allHolders[i]);
-        }
-
-        setHolders(processedHolders);
+      const data = await response.json();
+      
+      if (data.holders && Array.isArray(data.holders)) {
+        console.log(`Found ${data.holders.length} holders from backend API`);
+        setHolders(data.holders);
         setHoldersLoading(false);
         setLastUpdate(new Date());
-        onHoldersUpdate?.(processedHolders);
+        onHoldersUpdate?.(data.holders);
       } else {
-        // No real data available - keep existing holders
-        console.log('No real holder data available from any API');
+        console.log('No holders data received from backend API');
+        setHolders([]);
         setHoldersLoading(false);
         setLastUpdate(new Date());
       }
     } catch (error) {
       console.error('Error fetching holders:', error);
+      setHolders([]);
       setHoldersLoading(false);
     }
   };
@@ -522,59 +205,6 @@ export default function TokenHolders({ selectedToken, onHoldersUpdate }: TokenHo
     return balance.toString();
   };
 
-  const fetchHolderTransactionHistory = async (holderAddress: string) => {
-    try {
-      // Use Helius RPC with getSignaturesForAddress - this is the most reliable
-      const response = await fetch(`https://mainnet.helius-rpc.com/?api-key=${process.env.NEXT_PUBLIC_HELIUS_API_KEY}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'getSignaturesForAddress',
-          params: [holderAddress, { limit: 50 }] // Reduced from 1000 to 50 to save credits
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        
-        if (data.result && Array.isArray(data.result) && data.result.length > 0) {
-          // Sort by blockTime to get first and last transactions
-          const sortedTxs = data.result.sort((a: any, b: any) => {
-            const timeA = a.blockTime || 0;
-            const timeB = b.blockTime || 0;
-            return timeA - timeB;
-          });
-
-          const firstTx = sortedTxs[0];
-          const lastTx = sortedTxs[sortedTxs.length - 1];
-
-          console.log(`Found ${data.result.length} transactions for ${holderAddress}, first: ${firstTx.blockTime}, last: ${lastTx.blockTime}`);
-
-          return {
-            firstTransaction: firstTx.blockTime || 0,
-            lastTransaction: lastTx.blockTime || 0,
-            transactionCount: data.result.length
-          };
-        }
-      }
-      
-      console.log(`No transaction data found for ${holderAddress}`);
-      return {
-        firstTransaction: 0,
-        lastTransaction: 0,
-        transactionCount: 0
-      };
-    } catch (error) {
-      console.log('Error fetching transaction history for', holderAddress, ':', error);
-      return {
-        firstTransaction: 0,
-        lastTransaction: 0,
-        transactionCount: 0
-      };
-    }
-  };
 
   const formatHoldingTime = (firstTransaction: number) => {
     if (!firstTransaction || firstTransaction === 0) return 'Unknown';

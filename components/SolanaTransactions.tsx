@@ -109,7 +109,7 @@ export default function SolanaTransactions({ selectedToken }: SolanaTransactions
         throw new Error('Helius API key not configured');
       }
 
-      // Get recent transactions for the selected token
+      // Get recent transactions for the selected token - FRONTEND ONLY for user-specific searches
       const response = await fetch(`https://api.helius.xyz/v0/transactions?api-key=${heliusApiKey}`, {
         method: 'POST',
         headers: {

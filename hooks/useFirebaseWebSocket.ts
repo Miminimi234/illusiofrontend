@@ -328,7 +328,7 @@ export const useFirebaseWebSocket = () => {
 
       // Stop processing if we're in search mode
       if (isSearchModeRef.current) {
-        console.log('🔥 STOPPING token processing - Search mode active');
+        // Skip processing in search mode
         return;
       }
 
@@ -337,7 +337,7 @@ export const useFirebaseWebSocket = () => {
       setTokens(prevTokens => {
         // Double check search mode before updating tokens
         if (isSearchModeRef.current) {
-          console.log('🔥 SEARCH MODE - Skipping token processing');
+          // Skip token processing in search mode
           return prevTokens;
         }
         
@@ -546,14 +546,13 @@ export const useFirebaseWebSocket = () => {
               .map(([key, tokenData]) => transformTokenData(tokenData as FirebaseTokenData))
               .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-            // console.log('🔥 Transformed tokens for display:', transformedTokens.length, transformedTokens.slice(0, 2));
+            // Tokens transformed for display
             
             // Check if we're in search mode - if so, SKIP token updates
             setTokens(prevTokens => {
               // If in search mode, don't update tokens - keep the current search result
               if (isSearchModeRef.current) {
-                console.log('🔥 SEARCH MODE ACTIVE - Ignoring Firebase token updates, isSearchModeRef.current:', isSearchModeRef.current);
-                console.log('🔥 Keeping current tokens:', prevTokens.length, 'tokens');
+                // Search mode active - keeping current tokens
                 return prevTokens; // Keep current tokens (search result)
               }
               
@@ -562,7 +561,7 @@ export const useFirebaseWebSocket = () => {
               const newTokens = transformedTokens.filter(token => !existingMints.has(token.mint));
               
               if (newTokens.length > 0) {
-                console.log('🔥 Processing', newTokens.length, 'new tokens');
+                // Processing new tokens with animation
                 // Process tokens one by one with animation timing
                 processTokensOneByOne(newTokens);
               }
@@ -582,7 +581,7 @@ export const useFirebaseWebSocket = () => {
             if (!isSearchModeRef.current) {
               setTokens([]);
             } else {
-              console.log('🔥 SEARCH MODE - Not clearing tokens on empty Firebase data');
+              // Search mode - preserving current tokens
             }
             setConnectionStatus(prev => ({
               ...prev,
@@ -616,7 +615,7 @@ export const useFirebaseWebSocket = () => {
         }
       );
     } catch (error) {
-      console.error('🔥 Error setting up Firebase listener:', error);
+      console.error('Error setting up Firebase listener:', error);
       setConnectionStatus({
         isConnected: false,
         isConnecting: false,
@@ -683,68 +682,51 @@ export const useFirebaseWebSocket = () => {
 
   // Add a searched token to the list (force add even if exists)
   const addToken = useCallback((newToken: any, forceAdd: boolean = true) => {
-    console.log('🔥 addToken called with:', newToken, 'forceAdd:', forceAdd);
-    
     // If in search mode, ignore regular addToken calls
     if (isSearchModeRef.current) {
-      console.log('🔥 SEARCH MODE - Ignoring regular addToken call');
       return;
     }
     
     setTokens(prevTokens => {
-      console.log('🔥 Current tokens count:', prevTokens.length);
       const existingMints = new Set(prevTokens.map(t => t.mint));
       
       if (existingMints.has(newToken.mint) && !forceAdd) {
-        console.log('🔥 Token already exists and forceAdd is false, not adding');
         return prevTokens; // Don't add if already exists and not forcing
       }
       
       if (existingMints.has(newToken.mint) && forceAdd) {
-        console.log('🔥 Token already exists but forcing add - removing old and adding new');
         // Remove the existing token first, then add the new one
         const withoutExisting = prevTokens.filter(t => t.mint !== newToken.mint);
         const updated = [newToken, ...withoutExisting]
           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
           .slice(0, 100); // Keep only most recent 100 tokens
         
-        console.log('🔥 Updated tokens count (force add):', updated.length);
         return updated;
       }
       
-      console.log('🔥 Adding new token to list');
       // Add the new token to the beginning
       const updated = [newToken, ...prevTokens]
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
         .slice(0, 100); // Keep only most recent 100 tokens
       
-      console.log('🔥 Updated tokens count:', updated.length);
       return updated;
     });
   }, []);
 
   // Replace all tokens with just the searched token
   const replaceWithSearchToken = useCallback((searchToken: any) => {
-    console.log('🔥 REPLACING ALL TOKENS with search token:', searchToken);
-    
     // Clear any pending token processing
     if (tokenProcessingTimeoutRef.current) {
       clearTimeout(tokenProcessingTimeoutRef.current);
       tokenProcessingTimeoutRef.current = null;
-      console.log('🔥 Cleared pending token processing');
     }
     
     setTokens(prevTokens => {
       // Store original tokens for reset
       if (!isSearchMode) {
-        console.log('🔥 Storing original tokens for reset:', prevTokens.length);
-        console.log('🔥 ENTERING SEARCH MODE - ALL token updates blocked');
-        console.log('🔥 Current tokens before search:', prevTokens.length);
         setOriginalTokens(prevTokens);
         setIsSearchMode(true);
         isSearchModeRef.current = true;
-        console.log('🔥 isSearchModeRef.current set to:', isSearchModeRef.current);
-        console.log('🔥 Search mode protection ACTIVATED');
       }
       
       // Return only the searched token
@@ -754,12 +736,9 @@ export const useFirebaseWebSocket = () => {
 
   // Reset to original tokens
   const resetToOriginalTokens = useCallback(() => {
-    console.log('🔥 RESETTING to original tokens:', originalTokens.length);
-    console.log('🔥 Exiting search mode - Firebase streaming will resume');
     setTokens(originalTokens);
     setIsSearchMode(false);
     isSearchModeRef.current = false;
-    console.log('🔥 isSearchModeRef.current set to:', isSearchModeRef.current);
     setOriginalTokens([]);
   }, [originalTokens]);
 

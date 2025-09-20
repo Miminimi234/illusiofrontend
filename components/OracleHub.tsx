@@ -190,7 +190,7 @@ export default function OracleHub({ isOpen, onClose }: OracleHubProps) {
       const shouldArchive = await analyzeConversationForCompletion(conversationText, signalCount, randomThreshold);
       
       if (shouldArchive) {
-        console.log(`🎯 Conversation completion detected at ${messageCounter} messages (threshold: ${randomThreshold})`);
+        // Conversation completion detected, archiving
         await performArchive();
       }
     } catch (error) {

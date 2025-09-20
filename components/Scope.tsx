@@ -1673,7 +1673,7 @@ function InsightsColumn({
 
           const timeframeData = getTimeframeData(selectedTimeframe);
           
-          console.log(`🔍 JUPITER DEBUG (${selectedTimeframe}):`, {
+          // Jupiter market data debug
             mint: mint.slice(0, 8),
             price: tokenData.usdPrice,
             marketCap: tokenData.mcap,
@@ -1702,7 +1702,7 @@ function InsightsColumn({
           });
           
         } else {
-          console.log(`⚠️ JUPITER: No market data found for ${mint.slice(0, 8)}...`);
+          // No market data found
         }
       } else {
         console.log(`❌ JUPITER: API failed with status ${response.status}`);
@@ -1724,7 +1724,7 @@ function InsightsColumn({
     
     setHolderLoading(true);
     try {
-      // console.log(`🔍 Fetching holder count for ${mint}`);
+      // Fetching holder count
       
       // Try our server-side holder endpoint first (most reliable)
       try {
@@ -1798,7 +1798,7 @@ function InsightsColumn({
       }
       
       // If no data found from any source, try to estimate based on market cap
-      console.log(`⚠️ No holder data found for ${mint} from any API`);
+      // No holder data found from any API
       
       // Try to estimate holder count based on market cap and volume
       if (focusToken && focusToken.marketCap && focusToken.volume24h) {
@@ -3149,7 +3149,7 @@ export const Scope = ({
 
   // Memoize filtered tokens to prevent recalculation on every render
   const filteredTokens = useMemo(() => {
-    // console.log("🔍 Scope filtering tokens:", tokens?.length || 0, "tokens received", tokens?.slice(0, 2));
+    // Filtering tokens for scope display
     
     // Use all tokens (no more search filtering)
     const tokensToFilter = tokens;
@@ -3193,7 +3193,7 @@ export const Scope = ({
 
     // Apply custom filters to fresh tokens
     const applyCustomFilters = (tokens: any[]) => {
-      // console.log(`🔍 Applying filters: minMC=${filters.minMarketCap}, maxMC=${filters.maxMarketCap}, keywords=${filters.keywords}`);
+      // Applying custom filters
       return tokens.filter(token => {
         // Market cap filtering
         const marketcap = token.marketCap || 0;
@@ -3645,7 +3645,7 @@ export const Scope = ({
             >
               <SearchDropdown 
                 onTokenSelect={(token) => {
-                  console.log('🔍 Search token selected:', token);
+                  // Search token selected
                   
                   // Convert the search token to the format expected by SCOPE (TokenData interface)
                   const scopeToken = {
@@ -3718,9 +3718,7 @@ export const Scope = ({
                     status: 'active' // Set as active by default
                   };
                   
-                  console.log('🔍 Converted scope token:', scopeToken);
-                  console.log('🔍 Token data for insights:', {
-                    mint: scopeToken.mint,
+                  // Token converted for scope display
                     marketCap: scopeToken.marketCap,
                     price: scopeToken.price,
                     volume24h: scopeToken.volume24h,
@@ -3728,7 +3726,7 @@ export const Scope = ({
                     symbol: scopeToken.symbol,
                     name: scopeToken.name
                   });
-                  console.log('🔍 Token timestamp check:', {
+                  // Token timestamp validation
                     createdAt: scopeToken.createdAt,
                     now: new Date().toISOString(),
                     parsedTime: new Date(scopeToken.createdAt).getTime(),
@@ -3737,20 +3735,15 @@ export const Scope = ({
                   
                   // REPLACE ALL TOKENS with just the searched token
                   if (onAddToken) {
-                    console.log('🔍 REPLACING ALL TOKENS with searched token');
+                    // Replacing all tokens with search result
                     onAddToken(scopeToken);
                     
                     // Add a small delay to let the token be replaced, then log the result
                     setTimeout(() => {
-                      console.log('🔍 Tokens after REPLACE:', tokens.length);
-                      console.log('🔍 Should be only 1 token:', tokens.slice(0, 3).map(t => ({ 
-                        mint: t.mint, 
-                        name: t.name, 
-                        createdAt: t.createdAt 
-                      })));
+                      // Tokens replaced successfully
                     }, 100);
                   } else {
-                    console.log('🔍 onAddToken callback not available');
+                    // Add token callback not available
                   }
                   
                   // Focus on the selected token

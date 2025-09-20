@@ -21,7 +21,7 @@ export default function RadialVideoButtons({ isNavigationHubOpen, setIsNavigatio
 
   // Debug: Log when buttons are rendered (but only when state changes to avoid infinite loops)
   useEffect(() => {
-    console.log("🎯 BUTTONS STATE CHANGED - isScopeOpen:", isScopeOpen, "isNavigationHubOpen:", isNavigationHubOpen, "isOracleHubOpen:", isOracleHubOpen, "isManifestoOpen:", isManifestoOpen);
+    // Button states updated
   }, [isScopeOpen, isNavigationHubOpen, isOracleHubOpen, isManifestoOpen]);
 
 
@@ -45,21 +45,10 @@ export default function RadialVideoButtons({ isNavigationHubOpen, setIsNavigatio
     { pos: "navigation", color: "#FF6B6B", alt: "Navigation", onClick: () => setIsNavigationHubOpen(true), video: "/1.webm", type: "webm" },
     { pos: "oracle", color: "#96CEB4", alt: "Oracle", onClick: () => setIsOracleHubOpen(true), video: "/4.webm", type: "webm" },
     { pos: "scope", color: "#45B7D1", alt: "Scope", onClick: () => {
-      console.log("🎯 SCOPE BUTTON CLICKED - Setting isScopeOpen to true");
-      console.log("🎯 BEFORE: isScopeOpen should be false");
-      console.log("🎯 Button click handler executed successfully");
-      console.log("🎯 About to call setIsScopeOpen(true)");
-      
       try {
         setIsScopeOpen(true);
-        console.log("🎯 AFTER: setIsScopeOpen(true) called successfully");
-        
-        // Force a re-render to see the state change
-        setTimeout(() => {
-          console.log("🎯 DELAYED CHECK: isScopeOpen should still be true");
-        }, 100);
       } catch (error) {
-        console.error("🎯 ERROR in button click handler:", error);
+        console.error("Error in scope button click handler:", error);
       }
     }, video: "/3.webm", type: "webm" },
     { pos: "manifesto", color: "#4ECDC4", alt: "Manifesto", onClick: () => setIsManifestoOpen(true), video: "/2.webm", type: "webm" },

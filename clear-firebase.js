@@ -4,7 +4,7 @@ const serviceAccount = require('./firebase-service-account.json');
 // Initialize Firebase Admin
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  databaseURL: 'https://illusio-b9d0b-default-rtdb.firebaseio.com'
+  databaseURL: 'https://illusio-317d3-default-rtdb.firebaseio.com'
 });
 
 const db = admin.database();

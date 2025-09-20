@@ -1,27 +1,34 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { initializeApp } from 'firebase/app';
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
 import { getDatabase, ref, onValue, off } from 'firebase/database';
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
-// Firebase configuration
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyAeZpAAIWtaPM6ZQj0rJ8et0SmplJmqjGw",
-  authDomain: "illusio-b9d0b.firebaseapp.com",
-  databaseURL: "https://illusio-b9d0b-default-rtdb.firebaseio.com",
-  projectId: "illusio-b9d0b",
-  storageBucket: "illusio-b9d0b.firebasestorage.app",
-  messagingSenderId: "877208190248",
-  appId: "1:877208190248:web:41adb072ee02c02356641d",
-  measurementId: "G-0RX02G217N"
+  apiKey: "AIzaSyDEmuRrX9CTaviTW2LBLJgZ_7pIoa1z3fI",
+  authDomain: "illusio-317d3.firebaseapp.com",
+  databaseURL: "https://illusio-317d3-default-rtdb.firebaseio.com",
+  projectId: "illusio-317d3",
+  storageBucket: "illusio-317d3.firebasestorage.app",
+  messagingSenderId: "854608020221",
+  appId: "1:854608020221:web:67b93ab4285f6026e93494",
+  measurementId: "G-CLPB2GXJFZ"
 };
 
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+
 // Initialize Firebase (only once)
-let app: any = null;
 let database: any = null;
 
 const initializeFirebase = () => {
-  if (!app) {
-    app = initializeApp(firebaseConfig);
+  if (!database) {
     database = getDatabase(app);
   }
   return { app, database };

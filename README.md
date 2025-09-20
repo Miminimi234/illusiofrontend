@@ -20,61 +20,61 @@ ILLUSIO exists because markets behave like a simulation that keeps claiming to b
 
 **The Retrocausality Lab** - Runs many possible futures and looks for the footprints they would leave in the present. When those footprints begin to appear in live data, confidence rises. When they fail to appear, confidence falls.
 
-## ✨ Key Features
+## Key Features
 
-### 🎯 **Market Analysis**
+### Market Analysis
 - **Real-time Token Data**: Live market data with instant updates
 - **Advanced Filtering**: Smart token filtering and search functionality
 - **Token Insights**: Detailed analysis and market information
 - **Multi-Column Layout**: Organized view with different token categories
 
-### 🤖 **AI-Powered Analysis**
+### AI-Powered Analysis
 - **Interactive AI Companions**: Drag-and-drop AI agents for token analysis
 - **Real-time Chat**: Communicate with AI about token performance
 - **Predictive Analytics**: AI-driven market predictions and forecasts
 - **Pattern Recognition**: Advanced algorithms for signal detection
 
-### 🔬 **Retrocausality Lab**
+### Retrocausality Lab
 - **Live Transaction Visualization**: Real-time quantum eraser diagram
 - **Interactive Controls**: Zoom, pan, and explore the visualization
 - **Live Data Integration**: Transactions flow through the quantum setup
 - **Confidence Indicators**: Visual feedback on prediction accuracy
 
-### 🎨 **Immersive Interface**
+### Immersive Interface
 - **Quantum Geometry**: Futuristic design with animated elements
 - **Background Videos**: Dynamic video backgrounds
 - **Smooth Animations**: Framer Motion powered transitions
 - **Responsive Design**: Optimized for all screen sizes
 
-## 🛠️ Technology Stack
+## Technology Stack
 
-### **Frontend**
+### Frontend
 - **Next.js 14.2.32** - React framework with App Router
 - **TypeScript 5.0** - Type-safe development
 - **Tailwind CSS 3.0** - Utility-first CSS framework
 - **Framer Motion** - Animation library
 - **React Hooks** - State management and side effects
 
-### **Backend**
+### Backend
 - **Express.js** - Server framework
 - **PostgreSQL** - Database for token metadata
 - **WebSocket** - Real-time data streaming
 - **Helius API** - Solana blockchain integration
 - **Birdeye API** - Market data aggregation
 
-### **AI Integration**
+### AI Integration
 - **OpenAI GPT** - Advanced language models
 - **Grok AI** - Real-time market analysis
 - **Custom AI Models** - Specialized trading algorithms
 - **Natural Language Processing** - Chat interface
 
-### **Blockchain**
+### Blockchain
 - **Solana RPC** - Direct blockchain access
 - **Token Metadata** - Comprehensive token information
 - **Transaction Analysis** - Real-time trade monitoring
 - **Market Data** - Price, volume, and liquidity tracking
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 ILLUSIO/
@@ -107,7 +107,7 @@ ILLUSIO/
 └── utils/                        # Utility functions
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 - Node.js 18+
@@ -148,10 +148,10 @@ ILLUSIO/
 6. **Open your browser**
    Navigate to [http://localhost:3000](http://localhost:3000)
 
-## 🔧 Configuration
+## Configuration
 
-### **Environment Variables**
-**🔑 IMPORTANT**: You need to set up API keys to use all features!
+### Environment Variables
+**Important**: You need to set up API keys to use all features.
 
 1. **Copy the environment template:**
    ```bash
@@ -170,21 +170,21 @@ ILLUSIO/
 
 See [ENVIRONMENT_SETUP.md](ENVIRONMENT_SETUP.md) for complete setup instructions.
 
-## 🎮 How to Use
+## How to Use
 
-### **Market Analysis**
+### Market Analysis
 1. **Search Tokens**: Use the search bar to find specific tokens
 2. **View Live Data**: Real-time market data and transaction flows
 3. **Analyze Patterns**: AI-powered insights and predictions
 4. **Track Performance**: Monitor token performance over time
 
-### **Retrocausality Lab**
+### Retrocausality Lab
 1. **Search for Token**: Enter a token contract address
 2. **Watch Live Flow**: See transactions flow through the quantum eraser
 3. **Interactive Controls**: Zoom and pan to explore the visualization
 4. **Monitor Confidence**: Visual indicators show prediction accuracy
 
-### **AI Companions**
+### AI Companions
 1. **Select Companion**: Choose an AI agent for analysis
 2. **Drag & Drop**: Attach companions to specific tokens
 3. **Real-time Chat**: Communicate with AI about market conditions
@@ -202,7 +202,7 @@ ILLUSIO is not about worshiping charts or chasing stories. It is about building 
 
 We measure, we clean, we simulate, we compare, and then we act when the picture is good enough and still early. That is the point of the project and the promise we intend to keep.
 
-## 🤝 Contributing
+## Contributing
 
 This is a framework designed to work for any markets. Contributions that improve the signal-to-noise ratio are welcome.
 
@@ -212,11 +212,11 @@ This is a framework designed to work for any markets. Contributions that improve
 4. **Push to the branch**: `git push origin feature/amazing-feature`
 5. **Open a Pull Request**
 
-## 📄 License
+## License
 
 MIT License - see LICENSE file for details.
 
-## 📞 Support
+## Support
 
 - **Issues**: [GitHub Issues](https://github.com/greaterdan/FUTURE1/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/greaterdan/FUTURE1/discussions)

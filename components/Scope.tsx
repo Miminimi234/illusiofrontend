@@ -3895,7 +3895,7 @@ export const Scope = ({
                 </div>
                     
                     {isDropdownOpen && (
-                      <div className="absolute top-full left-0 mt-1 bg-black/90 border border-white/20 rounded-md shadow-lg z-50 w-[80px]">
+                      <div className="absolute top-full left-0 mt-1 bg-black/90 border border-white/20 rounded-md shadow-lg z-50 w-[120px]">
                         <button
                           onClick={() => {
                             setAssetType('crypto');

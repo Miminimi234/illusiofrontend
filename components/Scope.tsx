@@ -4580,7 +4580,6 @@ export const Scope = ({
                                   className="w-full p-3 bg-white/5 border border-white/10 rounded-lg text-white focus:border-white/20 focus:outline-none"
                                 >
                                   <option value="server-grok">Grok-4 (ILLUSIO Server) - No API Key Required</option>
-                                  <option value="grok4">Grok-4 (X.AI) - Requires API Key</option>
                                   <option value="gpt4">GPT-4 (OpenAI) - Requires API Key</option>
                                   <option value="claude">Claude (Anthropic) - Requires API Key</option>
                                   <option value="gemini">Gemini (Google) - Requires API Key</option>

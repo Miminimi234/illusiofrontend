@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { xapiService } from "@/utils/xapiService";
 import { useFirebaseWebSocket } from "@/hooks/useFirebaseWebSocket";
+import { useOracleMessages } from "@/hooks/useOracleMessages";
 
 interface OracleHubProps {
   isOpen: boolean;
@@ -44,6 +45,9 @@ export default function OracleHub({ isOpen, onClose }: OracleHubProps) {
     retrocausal: []
   }); // Track which outputs have been used
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const [isUserScrolling, setIsUserScrolling] = useState(false);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
 
   // Firebase connection for real-time token data
   const {
@@ -53,35 +57,52 @@ export default function OracleHub({ isOpen, onClose }: OracleHubProps) {
     reconnect: reconnectFirebase
   } = useFirebaseWebSocket();
 
+  // Firebase connection for real-time Oracle messages
+  const {
+    messages: firebaseMessages,
+    session: firebaseSession,
+    loading: oracleLoading,
+    error: oracleError,
+    refreshMessages
+  } = useOracleMessages(100); // Load up to 100 recent messages
+
   // Load archives from localStorage on mount
   useEffect(() => {
-    const savedArchives = localStorage.getItem('oracle-archives');
-    if (savedArchives) {
-      try {
-        const parsedArchives = JSON.parse(savedArchives);
-        setArchives(parsedArchives);
-      } catch (error) {
-        console.error('Error loading archives from localStorage:', error);
+    try {
+      const savedArchives = localStorage.getItem('oracle-archives');
+      if (savedArchives) {
+        try {
+          const parsedArchives = JSON.parse(savedArchives);
+          setArchives(parsedArchives);
+        } catch (error) {
+          console.error('Error parsing archives:', error);
+        }
       }
+    } catch (storageError) {
+      console.warn('Could not access localStorage for archives:', storageError);
     }
   }, []);
 
   // Load chat messages and counter from localStorage on mount
   useEffect(() => {
-    const savedMessages = localStorage.getItem('oracle-chat-messages');
-    const savedCounter = localStorage.getItem('oracle-message-counter');
-    
-    if (savedMessages) {
-      try {
-        const parsedMessages = JSON.parse(savedMessages);
-        setChatMessages(parsedMessages);
-      } catch (error) {
-        console.error('Error loading messages from localStorage:', error);
+    try {
+      const savedMessages = localStorage.getItem('oracle-chat-messages');
+      const savedCounter = localStorage.getItem('oracle-message-counter');
+      
+      if (savedMessages) {
+        try {
+          const parsedMessages = JSON.parse(savedMessages);
+          setChatMessages(parsedMessages);
+        } catch (error) {
+          console.error('Error parsing messages:', error);
+        }
       }
-    }
-    
-    if (savedCounter) {
-      setMessageCounter(parseInt(savedCounter, 10));
+      
+      if (savedCounter) {
+        setMessageCounter(parseInt(savedCounter, 10));
+      }
+    } catch (storageError) {
+      console.warn('Could not access localStorage for messages:', storageError);
     }
   }, []);
 
@@ -105,20 +126,20 @@ export default function OracleHub({ isOpen, onClose }: OracleHubProps) {
   // Initialize chat with persisted data or start fresh
   useEffect(() => {
     if (isOpen && chatMessages.length === 0) {
-      // Try to load from localStorage first
-      const savedMessages = localStorage.getItem('oracle-chat-messages');
-      const savedCounter = localStorage.getItem('oracle-message-counter');
+      // Try to load from oracleService instead of localStorage
+      try {
+        const { oracleService } = require('../utils/oracleService');
+        const savedMessages = oracleService.getMessages();
+        const savedCounter = oracleService.getMessageCount();
       
-      if (savedMessages && savedCounter) {
+      if (savedMessages && savedMessages.length > 0) {
         try {
-          const parsedMessages = JSON.parse(savedMessages);
-          const parsedCounter = parseInt(savedCounter);
-          setChatMessages(parsedMessages);
-          setMessageCounter(parsedCounter);
+          setChatMessages(savedMessages);
+          setMessageCounter(savedCounter);
           
           // Initialize agent rotation ref based on last message
-          if (parsedMessages.length > 0) {
-            const lastMessage = parsedMessages[parsedMessages.length - 1];
+          if (savedMessages.length > 0) {
+            const lastMessage = savedMessages[savedMessages.length - 1];
             const agents = ['analyzer', 'predictor', 'quantum-eraser', 'retrocausal'];
             const agentIndex = agents.indexOf(lastMessage.agent);
             lastAgentIndexRef.current = agentIndex;
@@ -152,8 +173,60 @@ export default function OracleHub({ isOpen, onClose }: OracleHubProps) {
           retrocausal: []
         };
       }
+      } catch (serviceError) {
+        console.error('Error accessing oracleService:', serviceError);
+        // Fallback to empty state
+        setChatMessages([]);
+        setMessageCounter(0);
+        lastAgentIndexRef.current = 0;
+      }
     }
   }, [isOpen]);
+
+  // Sync Firebase messages with local chat messages in real-time
+  useEffect(() => {
+    if (firebaseMessages && firebaseMessages.length > 0 && isOpen) {
+      // Convert Firebase messages to local ChatMessage format
+      const convertedMessages: ChatMessage[] = firebaseMessages.map((fbMsg) => ({
+        id: fbMsg.id,
+        agent: fbMsg.agent,
+        message: fbMsg.message,
+        timestamp: new Date(fbMsg.timestamp),
+        type: fbMsg.type
+      }));
+
+      // Sort by timestamp (oldest first for chat display)
+      convertedMessages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+
+      // Only update if we have new messages or different content
+      const currentMessagesStr = JSON.stringify(chatMessages.map(m => ({ id: m.id, message: m.message })));
+      const newMessagesStr = JSON.stringify(convertedMessages.map(m => ({ id: m.id, message: m.message })));
+      
+      if (currentMessagesStr !== newMessagesStr) {
+        // Update local state with Firebase messages
+        setChatMessages(convertedMessages);
+        setMessageCounter(convertedMessages.length);
+
+        // Update agent rotation based on last message
+        if (convertedMessages.length > 0) {
+          const lastMessage = convertedMessages[convertedMessages.length - 1];
+          const agents = ['analyzer', 'predictor', 'quantum-eraser', 'retrocausal'];
+          const agentIndex = agents.indexOf(lastMessage.agent);
+          lastAgentIndexRef.current = agentIndex >= 0 ? agentIndex : 0;
+        }
+
+        // Try to save to localStorage, but don't fail if quota exceeded
+        try {
+          localStorage.setItem('oracle-chat-messages', JSON.stringify(convertedMessages));
+          localStorage.setItem('oracle-message-counter', convertedMessages.length.toString());
+        } catch (storageError) {
+          console.warn('LocalStorage quota exceeded in OracleHub sync, continuing without persistence:', storageError);
+        }
+        
+        console.log(`🔄 Oracle messages synced from Firebase: ${convertedMessages.length} messages`);
+      }
+    }
+  }, [firebaseMessages, isOpen, chatMessages]);
 
   // Dynamic archiving based on conversation completion
   useEffect(() => {
@@ -259,8 +332,12 @@ Respond with ONLY "YES" if the conversation feels complete and ready for archivi
       
       setArchives(prev => {
         const newArchives = [archiveEntry, ...prev];
-        // Persist archives to localStorage
-        localStorage.setItem('oracle-archives', JSON.stringify(newArchives));
+        // Try to persist archives to localStorage
+        try {
+          localStorage.setItem('oracle-archives', JSON.stringify(newArchives));
+        } catch (storageError) {
+          console.warn('Could not save archives to localStorage:', storageError);
+        }
         return newArchives;
       });
       
@@ -268,9 +345,13 @@ Respond with ONLY "YES" if the conversation feels complete and ready for archivi
       setChatMessages([]);
       setMessageCounter(0);
       
-      // Update localStorage to reflect the cleared state
-      localStorage.setItem('oracle-chat-messages', JSON.stringify([]));
-      localStorage.setItem('oracle-message-counter', '0');
+      // Try to update localStorage to reflect the cleared state
+      try {
+        localStorage.setItem('oracle-chat-messages', JSON.stringify([]));
+        localStorage.setItem('oracle-message-counter', '0');
+      } catch (storageError) {
+        console.warn('Could not clear localStorage:', storageError);
+      }
       
       console.log(`📦 Dynamic Archive: ${archiveEntry.messageCount} messages at ${archiveEntry.time}`);
       console.log(`🎨 Generated AI ASCII banner: ${asciiBanner.substring(0, 100)}...`);
@@ -290,8 +371,12 @@ Respond with ONLY "YES" if the conversation feels complete and ready for archivi
       
       setArchives(prev => {
         const newArchives = [archiveEntry, ...prev];
-        // Persist archives to localStorage
-        localStorage.setItem('oracle-archives', JSON.stringify(newArchives));
+        // Try to persist archives to localStorage
+        try {
+          localStorage.setItem('oracle-archives', JSON.stringify(newArchives));
+        } catch (storageError) {
+          console.warn('Could not save archives to localStorage:', storageError);
+        }
         return newArchives;
       });
       setChatMessages([]);
@@ -301,29 +386,45 @@ Respond with ONLY "YES" if the conversation feels complete and ready for archivi
     }
   };
 
-  // Auto-scroll to bottom when new messages arrive or when typing starts
+  // Detect user scrolling
+  const handleScroll = () => {
+    if (!chatContainerRef.current) return;
+    
+    const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+    const isAtBottom = scrollTop + clientHeight >= scrollHeight - 10; // 10px threshold
+    
+    setShouldAutoScroll(isAtBottom);
+    
+    if (!isAtBottom) {
+      setIsUserScrolling(true);
+      // Reset user scrolling flag after 2 seconds of no scrolling
+      setTimeout(() => setIsUserScrolling(false), 2000);
+    }
+  };
+
+  // Auto-scroll to bottom only when user is at bottom or new messages arrive
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatMessages, isTyping]);
+    if (shouldAutoScroll && !isUserScrolling) {
+      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chatMessages, isTyping, shouldAutoScroll, isUserScrolling]);
 
   // Oracle now runs globally via oracleService - this component just displays the messages
   useEffect(() => {
-    // Refresh messages from localStorage when OracleHub opens
+    // Refresh messages from oracleService (in-memory) when OracleHub opens
     const refreshMessages = () => {
-      const savedMessages = localStorage.getItem('oracle-chat-messages');
-      const savedCounter = localStorage.getItem('oracle-message-counter');
-      
-      if (savedMessages) {
-        try {
-          const parsedMessages = JSON.parse(savedMessages);
-          setChatMessages(parsedMessages);
-        } catch (error) {
-          console.error('Error loading messages:', error);
+      try {
+        // Get messages from oracleService instead of localStorage
+        const { oracleService } = require('../utils/oracleService');
+        const messages = oracleService.getMessages();
+        const counter = oracleService.getMessageCount();
+        
+        if (messages && messages.length > 0) {
+          setChatMessages(messages);
+          setMessageCounter(counter);
         }
-      }
-      
-      if (savedCounter) {
-        setMessageCounter(parseInt(savedCounter, 10));
+      } catch (error) {
+        console.error('Error loading messages from oracleService:', error);
       }
     };
 
@@ -345,6 +446,31 @@ Respond with ONLY "YES" if the conversation feels complete and ready for archivi
     
     
     return selectedAgent;
+  };
+
+  // Save message to Firebase
+  const saveMessageToFirebase = async (message: ChatMessage) => {
+    try {
+      const { getDatabase, ref, push } = await import('firebase/database');
+      const { app } = await import('../lib/firebase');
+      
+      const db = getDatabase(app);
+      const messagesRef = ref(db, 'oracle-messages');
+      
+      const firebaseMessage = {
+        id: message.id,
+        agent: message.agent,
+        message: message.message,
+        timestamp: message.timestamp.getTime(),
+        type: message.type,
+        sessionId: `oracle-session-2025`
+      };
+      
+      await push(messagesRef, firebaseMessage);
+      console.log(`💾 Saved Oracle message to Firebase: ${message.agent}`);
+    } catch (error) {
+      console.error('Error saving message to Firebase:', error);
+    }
   };
 
   // Generate oracle response using server-side Grok API
@@ -385,27 +511,37 @@ Respond with ONLY "YES" if the conversation feels complete and ready for archivi
     try {
       const oracleResponse = await generateOracleResponse(agent, recentMessages);
       
-      return {
+      const message = {
         id: Date.now().toString(),
         agent: agent as 'analyzer' | 'predictor' | 'quantum-eraser' | 'retrocausal',
         message: oracleResponse,
         timestamp: new Date(),
-        type: 'analysis'
+        type: 'analysis' as 'analysis'
       };
+
+      // Save to Firebase
+      await saveMessageToFirebase(message);
+      
+      return message;
     } catch (error) {
       console.error('Error generating contextual response:', error);
       // Fallback response
-      return {
+      const fallbackMessage = {
         id: Date.now().toString(),
         agent: agent as 'analyzer' | 'predictor' | 'quantum-eraser' | 'retrocausal',
         message: `The ${agent} contemplates the cosmic market patterns from the oracle realm.`,
         timestamp: new Date(),
-        type: 'analysis'
+        type: 'analysis' as 'analysis'
       };
+
+      // Save fallback to Firebase too
+      await saveMessageToFirebase(fallbackMessage);
+      
+      return fallbackMessage;
     }
   };
 
-  const generateAnalyzerResponse = (lastMessage: ChatMessage | undefined, secondLastMessage: ChatMessage | undefined): ChatMessage => {
+  const generateAnalyzerResponse = async (lastMessage: ChatMessage | undefined, secondLastMessage: ChatMessage | undefined): Promise<ChatMessage> => {
     const responses = [
       // Core mystical analysis
       'The room stopped pretending to be loud once we looked closely. The same footsteps keep returning, which feels like habit, not hype. If we take one more step without flinching, the floor should grip instead of slip. Predictor, does that match what you see a little ahead?',
@@ -433,16 +569,21 @@ Respond with ONLY "YES" if the conversation feels complete and ready for archivi
       ] : [])
     ];
     
-    return {
+    const message = {
       id: Date.now().toString(),
-      agent: 'analyzer',
+      agent: 'analyzer' as 'analyzer',
       message: responses[Math.floor(Math.random() * responses.length)],
       timestamp: new Date(),
-      type: 'analysis'
+      type: 'analysis' as 'analysis'
     };
+
+    // Save to Firebase
+    await saveMessageToFirebase(message);
+    
+    return message;
   };
 
-  const generatePredictorResponse = (lastMessage: ChatMessage | undefined, secondLastMessage: ChatMessage | undefined): ChatMessage => {
+  const generatePredictorResponse = async (lastMessage: ChatMessage | undefined, secondLastMessage: ChatMessage | undefined): Promise<ChatMessage> => {
     const responses = [
       // Core mystical predictions
       'From a breath into tomorrow, this hinges when we stop rereading the same sentence. If we let the pause be quiet, the page turns on its own. If we poke it, the corridor fades. Retrocausal, does the door stay open when we simply walk?',
@@ -470,16 +611,21 @@ Respond with ONLY "YES" if the conversation feels complete and ready for archivi
       ] : [])
     ];
     
-    return {
+    const message = {
       id: Date.now().toString(),
-      agent: 'predictor',
+      agent: 'predictor' as 'predictor',
       message: responses[Math.floor(Math.random() * responses.length)],
       timestamp: new Date(),
-      type: 'prediction'
+      type: 'prediction' as 'prediction'
     };
+
+    // Save to Firebase
+    await saveMessageToFirebase(message);
+    
+    return message;
   };
 
-  const generateQuantumEraserResponse = (lastMessage: ChatMessage | undefined, secondLastMessage: ChatMessage | undefined): ChatMessage => {
+  const generateQuantumEraserResponse = async (lastMessage: ChatMessage | undefined, secondLastMessage: ChatMessage | undefined): Promise<ChatMessage> => {
     const responses = [
       // Core mystical denoising
       'The thunder was our own flashlight bouncing off the glass. I dimmed it, and what\'s left is smaller but true. If noise returns right when doubt rises, it isn\'t weather—it\'s staging. Analyzer, re-check the floor now that the echoes are honest.',
@@ -507,16 +653,21 @@ Respond with ONLY "YES" if the conversation feels complete and ready for archivi
       ] : [])
     ];
     
-    return {
+    const message = {
       id: Date.now().toString(),
-      agent: 'quantum-eraser',
+      agent: 'quantum-eraser' as 'quantum-eraser',
       message: responses[Math.floor(Math.random() * responses.length)],
       timestamp: new Date(),
-      type: 'analysis'
+      type: 'analysis' as 'analysis'
     };
+
+    // Save to Firebase
+    await saveMessageToFirebase(message);
+    
+    return message;
   };
 
-  const generateRetrocausalResponse = (lastMessage: ChatMessage | undefined, secondLastMessage: ChatMessage | undefined): ChatMessage => {
+  const generateRetrocausalResponse = async (lastMessage: ChatMessage | undefined, secondLastMessage: ChatMessage | undefined): Promise<ChatMessage> => {
     const responses = [
       // Core mystical retrocausal analysis
       'In the room where we keep our posture, the line doesn\'t rush; it just continues. To arrive here from now, we ignore the first wobble and keep our feet planted. If we narrate the wobble, the scene rewrites itself flatter. Predictor, is that the reflection you saw?',
@@ -544,13 +695,18 @@ Respond with ONLY "YES" if the conversation feels complete and ready for archivi
       ] : [])
     ];
     
-    return {
+    const message = {
       id: Date.now().toString(),
-      agent: 'retrocausal',
+      agent: 'retrocausal' as 'retrocausal',
       message: responses[Math.floor(Math.random() * responses.length)],
       timestamp: new Date(),
-      type: 'prediction'
+      type: 'prediction' as 'prediction'
     };
+
+    // Save to Firebase
+    await saveMessageToFirebase(message);
+    
+    return message;
   };
 
   // Helper functions for agent styling
@@ -1051,7 +1207,11 @@ the watcher changes the seen`;
                   )}
                 </div>
               ) : (
-                <div className="bg-black/50 border border-white/20 rounded p-2 overflow-y-auto flex-1">
+                <div 
+                  ref={chatContainerRef}
+                  onScroll={handleScroll}
+                  className="bg-black/50 border border-white/20 rounded p-2 overflow-y-auto flex-1"
+                >
                   <div className="space-y-2">
                     {getCurrentMessages().map((message) => {
                     // Special handling for ASCII banners

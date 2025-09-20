@@ -3667,7 +3667,7 @@ export const Scope = ({
           {/* Left side - SCOPE title only */}
           <div className="flex items-center">
             <motion.h1 
-              className="text-2xl font-bold text-white"
+              className="text-xl font-bold text-white"
               initial={{ x: -20, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
@@ -3677,9 +3677,9 @@ export const Scope = ({
           </div>
         
           {/* Center - Search Bar */}
-          <div className="flex items-center justify-center">
+          <div className="flex items-center justify-center mt-2">
             <motion.div 
-              className="flex items-center space-x-2 w-full max-w-md"
+              className="flex items-center space-x-2 w-full max-w-sm"
               initial={{ y: -10, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}

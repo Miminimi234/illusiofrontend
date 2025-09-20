@@ -23,6 +23,31 @@ export default function BirthdayEntry({ onBirthdaySubmit, onProceedToMainPage }:
   const [visibleInputs, setVisibleInputs] = useState<number[]>([]);
   const [showLogos, setShowLogos] = useState(false);
   const [visibleLogos, setVisibleLogos] = useState<number[]>([]);
+  const [zodiacImageLoaded, setZodiacImageLoaded] = useState(false);
+
+  // Preload zodiac image when we have complete date
+  useEffect(() => {
+    if (day && month && year) {
+      const dayNum = parseInt(day);
+      const monthNum = parseInt(month);
+      const yearNum = parseInt(year);
+      
+      if (dayNum >= 1 && dayNum <= 31 && 
+          monthNum >= 1 && monthNum <= 12 && 
+          yearNum >= 1900 && yearNum <= 2024) {
+        const zodiacSign = getZodiacSign(new Date(yearNum, monthNum - 1, dayNum));
+        const imageSrc = getZodiacVideo(zodiacSign);
+        
+        // Preload the image
+        const img = new Image();
+        img.onload = () => {
+          console.log(`Zodiac image preloaded: ${zodiacSign}`);
+          setZodiacImageLoaded(true);
+        };
+        img.src = imageSrc;
+      }
+    }
+  }, [day, month, year]);
 
   const handleSubmit = () => {
     if (day && month && year) {
@@ -112,20 +137,20 @@ export default function BirthdayEntry({ onBirthdaySubmit, onProceedToMainPage }:
       const timer = setTimeout(() => {
         console.log('Setting showZodiac to true');
         setShowZodiac(true);
-      }, 200);
+      }, 100);
       
-      // Show zodiac image quickly after
+      // Show zodiac image immediately if preloaded, otherwise wait a bit
       const videoTimer = setTimeout(() => {
         console.log('Setting showZodiacVideo to true');
         setShowZodiacVideo(true);
-      }, 600);
+      }, zodiacImageLoaded ? 200 : 400);
       
       return () => {
         clearTimeout(timer);
         clearTimeout(videoTimer);
       };
     }
-  }, [isSubmitted, day, month, year, onBirthdaySubmit, onProceedToMainPage]);
+  }, [isSubmitted, zodiacImageLoaded, day, month, year, onBirthdaySubmit, onProceedToMainPage]);
 
   // Typewriter effect for title
   useEffect(() => {
@@ -249,31 +274,51 @@ export default function BirthdayEntry({ onBirthdaySubmit, onProceedToMainPage }:
             />
           </div>
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-4">
             {/* Zodiac Image */}
             {day && month && year && (
-              <div className={`w-96 h-96 mx-auto transition-all duration-300 ${
+              <div className={`w-96 h-96 mx-auto transition-all duration-500 ease-out ${
                 showZodiacVideo ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
               }`}>
-                <img
-                  src={getZodiacVideo(getZodiacSign(new Date(parseInt(year), parseInt(month) - 1, parseInt(day))))}
-                  alt={`${getZodiacSign(new Date(parseInt(year), parseInt(month) - 1, parseInt(day)))} zodiac sign`}
-                  className="w-full h-full object-cover rounded-lg"
-                  onError={(e) => console.error(`Zodiac image failed to load: ${getZodiacSign(new Date(parseInt(year), parseInt(month) - 1, parseInt(day)))}`, e)}
-                  onLoad={() => console.log(`Zodiac image loaded: ${getZodiacSign(new Date(parseInt(year), parseInt(month) - 1, parseInt(day)))}`)}
-                />
+                <div className="relative w-full h-full">
+                  <img
+                    src={getZodiacVideo(getZodiacSign(new Date(parseInt(year), parseInt(month) - 1, parseInt(day))))}
+                    alt={`${getZodiacSign(new Date(parseInt(year), parseInt(month) - 1, parseInt(day)))} zodiac sign`}
+                    className="w-full h-full object-contain rounded-lg"
+                    style={{
+                      imageRendering: 'crisp-edges',
+                      filter: 'contrast(1.15) brightness(1.1) saturate(1.3)',
+                    }}
+                    loading="eager"
+                    decoding="sync"
+                    onError={(e) => console.error(`Zodiac image failed to load: ${getZodiacSign(new Date(parseInt(year), parseInt(month) - 1, parseInt(day)))}`, e)}
+                    onLoad={() => {
+                      console.log(`Zodiac image loaded: ${getZodiacSign(new Date(parseInt(year), parseInt(month) - 1, parseInt(day)))}`);
+                      setZodiacImageLoaded(true);
+                    }}
+                  />
+                  
+                  {/* Loading overlay */}
+                  <div className={`absolute inset-0 bg-black/30 backdrop-blur-sm rounded-lg flex flex-col items-center justify-center transition-opacity duration-300 ${
+                    zodiacImageLoaded && showZodiacVideo ? 'opacity-0 pointer-events-none' : 'opacity-100'
+                  }`}>
+                    <div className="animate-spin rounded-full h-16 w-16 border-4 border-white/30 border-t-white mb-4"></div>
+                    <p className="text-white/80 text-sm font-mono">Loading your zodiac...</p>
+                  </div>
+                </div>
               </div>
             )}
             
-            {/* Welcome Message */}
-            <p className={`text-xl text-white/80 transition-all duration-300 ${
-              showZodiacVideo ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
-            }`} style={{ fontFamily: 'VT323, monospace' }}>
-              Welcome {day && month && year ? getZodiacSign(new Date(parseInt(year), parseInt(month) - 1, parseInt(day))).charAt(0).toUpperCase() + getZodiacSign(new Date(parseInt(year), parseInt(month) - 1, parseInt(day))).slice(1) : ''}
-            </p>
-            
-            {/* Enter Dapp Button */}
-            <button
+            {/* Welcome Message and Button - Closer spacing */}
+            <div className="space-y-3 -mt-2">
+              <p className={`text-xl text-white/80 transition-all duration-300 ${
+                showZodiacVideo ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
+              }`} style={{ fontFamily: 'VT323, monospace' }}>
+                Welcome {day && month && year ? getZodiacSign(new Date(parseInt(year), parseInt(month) - 1, parseInt(day))).charAt(0).toUpperCase() + getZodiacSign(new Date(parseInt(year), parseInt(month) - 1, parseInt(day))).slice(1) : ''}
+              </p>
+              
+              {/* Enter Dapp Button */}
+              <button
               onClick={() => {
                 const birthday = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
                 onBirthdaySubmit(birthday);
@@ -283,9 +328,10 @@ export default function BirthdayEntry({ onBirthdaySubmit, onProceedToMainPage }:
                 showZodiacVideo ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
               }`}
               style={{ fontFamily: 'VT323, monospace' }}
-            >
-              Enter Dapp
-            </button>
+              >
+                Enter Dapp
+              </button>
+            </div>
           </div>
         )}
       </div>

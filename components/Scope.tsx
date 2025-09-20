@@ -1193,36 +1193,49 @@ const TokenCardBase: React.FC<CardProps> = React.memo(({ token, visibleMintsRef,
               </a>
             )}
           </div>
-          
-            {/* Top Holders Percentage */}
-            {token.audit?.topHoldersPercentage !== undefined && (
-              <div 
-                className="flex items-center gap-1 px-2 py-1 rounded-md bg-white/5 border border-white/10 cursor-help"
-                title={`Top holders control ${token.audit.topHoldersPercentage.toFixed(1)}% of the token supply`}
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-teal-400">
-                  <path d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zm4 18v-6h2.5l-2.54-7.63A1.5 1.5 0 0 0 18.54 8H17c-.8 0-1.54.37-2.01.99L12 11l-2.99-2.01A2.5 2.5 0 0 0 7 8H5.46c-.8 0-1.54.37-2.01.99L1 15.37V22h2v-6h2.5l2.5 7.5h2L8.5 16H11v6h2v-6h2.5l2.5 7.5h2L16.5 16H19v6h2z"/>
-                </svg>
-                <span className="text-xs text-white/80 font-mono">
+        </div>
+        
+        {/* Middle section - Holder Information */}
+        <div className="flex items-center gap-2">
+          {/* Top Holders Percentage */}
+          {token.audit?.topHoldersPercentage !== undefined && (
+            <div 
+              className="flex items-center gap-1 px-2 py-1 rounded-md bg-white/5 border border-white/10 cursor-help transition-all duration-200 hover:bg-white/10 hover:border-white/20"
+              title={`Top holders control ${token.audit.topHoldersPercentage.toFixed(1)}% of the token supply`}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-teal-400">
+                <path d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zm4 18v-6h2.5l-2.54-7.63A1.5 1.5 0 0 0 18.54 8H17c-.8 0-1.54.37-2.01.99L12 11l-2.99-2.01A2.5 2.5 0 0 0 7 8H5.46c-.8 0-1.54.37-2.01.99L1 15.37V22h2v-6h2.5l2.5 7.5h2L8.5 16H11v6h2v-6h2.5l2.5 7.5h2L16.5 16H19v6h2z"/>
+              </svg>
+              <span className="text-xs text-white/80 font-mono relative group/badge">
+                <span className="group-hover/badge:opacity-0 transition-opacity duration-200">
                   {token.audit.topHoldersPercentage.toFixed(1)}%
                 </span>
-              </div>
-            )}
-            
-            {/* Dev Holding Percentage */}
-            {token.audit?.devBalancePercentage !== undefined && (
-              <div 
-                className="flex items-center gap-1 px-2 py-1 rounded-md bg-white/5 border border-white/10 cursor-help"
-                title={`Developer holds ${token.audit.devBalancePercentage.toFixed(1)}% of the token supply`}
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-teal-400">
-                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                </svg>
-                <span className="text-xs text-white/80 font-mono">
+                <span className="absolute inset-0 opacity-0 group-hover/badge:opacity-100 transition-opacity duration-200 flex items-center">
+                  Top
+                </span>
+              </span>
+            </div>
+          )}
+          
+          {/* Dev Holding Percentage */}
+          {token.audit?.devBalancePercentage !== undefined && (
+            <div 
+              className="flex items-center gap-1 px-2 py-1 rounded-md bg-white/5 border border-white/10 cursor-help transition-all duration-200 hover:bg-white/10 hover:border-white/20"
+              title={`Developer holds ${token.audit.devBalancePercentage.toFixed(1)}% of the token supply`}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-teal-400">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+              </svg>
+              <span className="text-xs text-white/80 font-mono relative group/badge">
+                <span className="group-hover/badge:opacity-0 transition-opacity duration-200">
                   {token.audit.devBalancePercentage.toFixed(1)}%
                 </span>
-              </div>
-            )}
+                <span className="absolute inset-0 opacity-0 group-hover/badge:opacity-100 transition-opacity duration-200 flex items-center">
+                  Dev
+                </span>
+              </span>
+            </div>
+          )}
         </div>
         
         {/* Contract Address - positioned on the far right */}

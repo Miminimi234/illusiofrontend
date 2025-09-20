@@ -313,23 +313,18 @@ export const useFirebaseWebSocket = () => {
       clearTimeout(tokenProcessingTimeoutRef.current);
     }
 
-    console.log(`🔥 Starting to process ${newTokens.length} tokens one by one with 1 second delay`);
-    console.log(`🔥 Token list:`, newTokens.map(t => `${t.symbol} (${t.mint.slice(0, 4)}...)`));
 
     const processNextToken = (index: number) => {
       if (index >= newTokens.length) {
-        console.log(`🔥 Finished processing all ${newTokens.length} tokens`);
         return;
       }
 
       const token = newTokens[index];
-      console.log(`🔥 Processing token ${index + 1}/${newTokens.length}: ${token.symbol} (${token.mint.slice(0, 4)}...)`);
       
       setTokens(prevTokens => {
         const existingMints = new Set(prevTokens.map(t => t.mint));
         if (existingMints.has(token.mint)) {
           // Skip if token already exists
-          console.log(`🔥 Skipping duplicate token: ${token.symbol}`);
           processNextToken(index + 1);
           return prevTokens;
         }
@@ -339,12 +334,9 @@ export const useFirebaseWebSocket = () => {
           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
           .slice(0, 100); // Keep only most recent 100 tokens
 
-        console.log(`🔥 Added token ${token.symbol}, total tokens now: ${updated.length}`);
-        console.log(`🔥 Next token will be processed in 1 second...`);
 
         // Process next token after a 1 second delay
         tokenProcessingTimeoutRef.current = setTimeout(() => {
-          console.log(`🔥 1 second delay completed, processing next token...`);
           processNextToken(index + 1);
         }, 1000); // 1000ms (1 second) delay between tokens
 
@@ -505,46 +497,36 @@ export const useFirebaseWebSocket = () => {
 
   // Connect to Firebase Realtime Database
   const connect = useCallback(() => {
-    console.log('🔥 Firebase connect called - current status:', connectionStatus);
     
     if (connectionStatus.isConnected || connectionStatus.isConnecting || listenerRef.current) {
-      console.log('🔥 Firebase already connected or connecting, skipping...');
       return;
     }
 
-    console.log('🔥 Starting Firebase connection...');
     setConnectionStatus(prev => ({ ...prev, isConnecting: true, error: null }));
     setLoading(true);
 
     try {
-      console.log('🔥 Initializing Firebase...');
       const { database: db } = initializeFirebase();
       const tokensRef = ref(db, 'jupiter_tokens/recent');
-      console.log('🔥 Firebase initialized, setting up listener...');
       
       listenerRef.current = onValue(
         tokensRef,
         (snapshot) => {
-          console.log('🔥 Firebase data received!');
           const data: FirebaseTokensResponse | null = snapshot.val();
           
           if (data) {
-            console.log('🔥 Processing Firebase data...');
             // Handle both data structures: direct tokens object or wrapped in tokens property
             const tokensData = data.tokens || data;
-            console.log('🔥 Tokens data structure:', Object.keys(tokensData).slice(0, 5));
             
             // Filter out non-token properties (like total_count)
             const tokenEntries = Object.entries(tokensData).filter(([key, value]) => 
               typeof value === 'object' && value !== null && value.id
             );
-            console.log('🔥 Filtered token entries:', tokenEntries.length);
             
             // Transform Firebase tokens to our format
             const transformedTokens = tokenEntries
               .map(([key, tokenData]) => transformTokenData(tokenData as FirebaseTokenData))
               .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-            console.log('🔥 Transformed tokens:', transformedTokens.length);
 
             // console.log('🔥 Transformed tokens for display:', transformedTokens.length, transformedTokens.slice(0, 2));
             
@@ -555,16 +537,13 @@ export const useFirebaseWebSocket = () => {
               const newTokens = transformedTokens.filter(token => !existingMints.has(token.mint));
               
               if (newTokens.length > 0) {
-                console.log(`🔥 Processing ${newTokens.length} new tokens (existing: ${prevTokens.length})`);
                 // Process tokens one by one with animation timing
                 processTokensOneByOne(newTokens);
               } else {
-                console.log(`🔥 No new tokens to process (existing: ${prevTokens.length})`);
               }
               
               return prevTokens; // Don't update immediately, let processTokensOneByOne handle it
             });
-            console.log('🔥 Setting connection status to connected and loading to false');
             setConnectionStatus({
               isConnected: true,
               isConnecting: false,
@@ -614,7 +593,6 @@ export const useFirebaseWebSocket = () => {
         error: error instanceof Error ? error.message : 'Unknown error',
         lastUpdate: null
       });
-      console.log('🔥 Setting loading to false due to error');
       setLoading(false);
     }
   }, [connectionStatus.isConnected, connectionStatus.isConnecting, transformTokenData]);
@@ -657,11 +635,9 @@ export const useFirebaseWebSocket = () => {
 
   // Set up connection on mount
   useEffect(() => {
-    console.log('🔥 useEffect calling connect...');
     connect();
     
     return () => {
-      console.log('🔥 useEffect cleanup - disconnecting...');
       disconnect();
       // Clear any pending token processing
       if (tokenProcessingTimeoutRef.current) {

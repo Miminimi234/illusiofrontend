@@ -1578,7 +1578,6 @@ function InsightsColumn({
     }
     
     try {
-      console.log(`🔄 JUPITER: Fetching all market data for ${mint.slice(0, 8)}...`);
       
       const response = await fetch(`https://lite-api.jup.ag/tokens/v2/search?query=${mint}`, {
         method: 'GET',
@@ -1676,7 +1675,6 @@ function InsightsColumn({
             lastUpdate: new Date()
           });
           
-          console.log(`✅ JUPITER: Updated all data for ${mint.slice(0, 8)}... - Price: $${tokenData.usdPrice}, MC: $${marketCap.toLocaleString()}, LP: $${tokenData.liquidity?.toLocaleString() || 'N/A'}`);
         } else {
           console.log(`⚠️ JUPITER: No market data found for ${mint.slice(0, 8)}...`);
         }
@@ -1738,7 +1736,6 @@ function InsightsColumn({
           if (birdeyeData.data && birdeyeData.data.items && Array.isArray(birdeyeData.data.items)) {
             setHolderCount(birdeyeData.data.items.length);
             setLastHolderUpdate(new Date());
-            console.log(`✅ Found ${birdeyeData.data.items.length} holders from Birdeye`);
             setHolderLoading(false);
             return;
           }
@@ -1764,7 +1761,6 @@ function InsightsColumn({
           if (solscanData.data && Array.isArray(solscanData.data)) {
             setHolderCount(solscanData.data.length);
             setLastHolderUpdate(new Date());
-            console.log(`✅ Found ${solscanData.data.length} holders from Solscan`);
             setHolderLoading(false);
             return;
           }
@@ -1857,7 +1853,6 @@ function InsightsColumn({
     if (!focusToken || !focusToken.mint) return;
 
     const interval = setInterval(() => {
-      console.log(`🔄 JUPITER: Auto-refreshing all market data for ${focusToken.mint.slice(0, 8)}...`);
       fetchJupiterMarketData(focusToken.mint, false);
     }, 5000); // 5 seconds
 
@@ -1963,7 +1958,6 @@ function InsightsColumn({
       // Use our algorithm to calculate forecast
       const forecast = calculateForecast(token);
       
-      console.log('✅ Algorithm forecast calculated:', forecast);
       
       setAiForecast(forecast);
       
@@ -3031,7 +3025,6 @@ export const Scope = ({
           })
         );
         
-        console.log('✅ Stock data transformed with logos:', transformedStocks.length, 'stocks');
         setStockData(transformedStocks);
       } else {
         setStockData([]);
@@ -3520,7 +3513,6 @@ export const Scope = ({
         }
       }
       
-      console.log('✅ Received response:', response);
       
       setIsTyping(false);
       setTypingCompanion(null);

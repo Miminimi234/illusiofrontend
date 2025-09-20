@@ -115,7 +115,6 @@ class OracleService {
       const counter = savedCounter ? parseInt(savedCounter) + 1 : 1;
       localStorage.setItem('oracle-message-counter', counter.toString());
 
-      console.log(`✅ Oracle message generated and saved: ${newMessage.message.substring(0, 50)}...`);
 
     } catch (error) {
       console.error('Error generating Oracle message:', error);

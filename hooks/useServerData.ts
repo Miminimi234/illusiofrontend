@@ -189,7 +189,6 @@ export const useServerData = (isOpen: boolean) => {
             
             // Debug: Log if market cap data is being preserved
             if (existingToken.marketcap && !serverToken.marketcap) {
-              console.log(`🔄 PRESERVED MC for ${existingToken.mint}: ${existingToken.marketcap} -> ${updatedToken.marketcap}`);
             }
             
             return updatedToken;
@@ -446,7 +445,6 @@ export const useServerData = (isOpen: boolean) => {
   // Fallback: If we have tokens from WebSocket but still loading, set loading to false
   useEffect(() => {
     if (isLoading && tokens.length > 0) {
-      console.log("🔄 Fallback: Setting isLoading to false because we have WebSocket tokens");
       setIsLoading(false);
       setConnectionStatus(wsConnected ? "Connected via WebSocket (Live)" : "Connected via WebSocket");
     }

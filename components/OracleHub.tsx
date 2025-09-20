@@ -343,8 +343,6 @@ Respond with ONLY "YES" if the conversation feels complete and ready for archivi
     const nextIndex = (lastAgentIndexRef.current + 1) % agents.length;
     const selectedAgent = agents[nextIndex];
     
-    console.log(`🔄 REF-BASED ROTATION: Index=${lastAgentIndexRef.current} → Next=${nextIndex} → Agent=${selectedAgent}`);
-    console.log(`📊 Recent agents: ${recentMessages.slice(-5).map(m => m.agent).join(' → ')}`);
     
     return selectedAgent;
   };

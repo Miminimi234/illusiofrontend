@@ -1674,6 +1674,7 @@ function InsightsColumn({
           const timeframeData = getTimeframeData(selectedTimeframe);
           
           // Jupiter market data debug
+          console.log({
             mint: mint.slice(0, 8),
             price: tokenData.usdPrice,
             marketCap: tokenData.mcap,
@@ -3719,6 +3720,7 @@ export const Scope = ({
                   };
                   
                   // Token converted for scope display
+                  console.log({
                     marketCap: scopeToken.marketCap,
                     price: scopeToken.price,
                     volume24h: scopeToken.volume24h,
@@ -3727,6 +3729,7 @@ export const Scope = ({
                     name: scopeToken.name
                   });
                   // Token timestamp validation
+                  console.log({
                     createdAt: scopeToken.createdAt,
                     now: new Date().toISOString(),
                     parsedTime: new Date(scopeToken.createdAt).getTime(),

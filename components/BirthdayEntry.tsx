@@ -26,6 +26,7 @@ export default function BirthdayEntry({ onBirthdaySubmit, onProceedToMainPage }:
 
   const handleSubmit = () => {
     if (day && month && year) {
+      console.log('Birthday submitted:', { day, month, year });
       setIsSubmitted(true);
       // Don't call onBirthdaySubmit here - just show the zodiac display
       // The user will click the button to proceed to main page
@@ -107,12 +108,15 @@ export default function BirthdayEntry({ onBirthdaySubmit, onProceedToMainPage }:
 
   useEffect(() => {
     if (isSubmitted) {
+      console.log('isSubmitted is true, showing zodiac display');
       const timer = setTimeout(() => {
+        console.log('Setting showZodiac to true');
         setShowZodiac(true);
       }, 200);
       
-      // Show zodiac video quickly after
+      // Show zodiac image quickly after
       const videoTimer = setTimeout(() => {
+        console.log('Setting showZodiacVideo to true');
         setShowZodiacVideo(true);
       }, 600);
       
@@ -246,20 +250,17 @@ export default function BirthdayEntry({ onBirthdaySubmit, onProceedToMainPage }:
           </div>
         ) : (
           <div className="space-y-8">
-            {/* Zodiac Video */}
+            {/* Zodiac Image */}
             {day && month && year && (
               <div className={`w-96 h-96 mx-auto transition-all duration-300 ${
                 showZodiacVideo ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
               }`}>
-                <video
+                <img
                   src={getZodiacVideo(getZodiacSign(new Date(parseInt(year), parseInt(month) - 1, parseInt(day))))}
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  preload="auto"
+                  alt={`${getZodiacSign(new Date(parseInt(year), parseInt(month) - 1, parseInt(day)))} zodiac sign`}
                   className="w-full h-full object-cover rounded-lg"
-                  onError={(e) => console.error(`Zodiac video failed to load: ${getZodiacSign(new Date(parseInt(year), parseInt(month) - 1, parseInt(day)))}`, e)}
+                  onError={(e) => console.error(`Zodiac image failed to load: ${getZodiacSign(new Date(parseInt(year), parseInt(month) - 1, parseInt(day)))}`, e)}
+                  onLoad={() => console.log(`Zodiac image loaded: ${getZodiacSign(new Date(parseInt(year), parseInt(month) - 1, parseInt(day)))}`)}
                 />
               </div>
             )}

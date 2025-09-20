@@ -3895,7 +3895,7 @@ export const Scope = ({
                 </div>
                     
                     {isDropdownOpen && (
-                      <div className="absolute top-full left-0 mt-1 bg-black/90 border border-white/20 rounded-md shadow-lg z-50 min-w-[80px]">
+                      <div className="absolute top-full left-0 mt-1 bg-black/90 border border-white/20 rounded-md shadow-lg z-50 w-[80px]">
                         <button
                           onClick={() => {
                             setAssetType('crypto');
@@ -3905,7 +3905,7 @@ export const Scope = ({
                             assetType === 'crypto' ? 'text-white bg-white/10' : 'text-white/70'
                           }`}
                         >
-                          Crypto
+                          SOL
                         </button>
                         <button
                           onClick={() => {
@@ -3913,11 +3913,12 @@ export const Scope = ({
                             setComingSoonType('stocks');
                             setShowComingSoon(true);
                           }}
-                          className={`w-full px-3 py-1.5 text-sm font-medium text-left hover:bg-white/10 transition-colors duration-200 ${
+                          className={`w-full px-3 py-1.5 text-xs font-medium text-left hover:bg-white/10 transition-colors duration-200 overflow-hidden ${
                             assetType === 'stocks' ? 'text-white bg-white/10' : 'text-white/70'
                           }`}
                         >
-                          Stocks
+                          <span>Stocks</span>
+                          <span className="text-xs text-white/50 ml-1">(Coming Soon)</span>
                         </button>
                         <button
                           onClick={() => {
@@ -3925,11 +3926,12 @@ export const Scope = ({
                             setComingSoonType('news');
                             setShowComingSoon(true);
                           }}
-                          className={`w-full px-3 py-1.5 text-sm font-medium text-left hover:bg-white/10 transition-colors duration-200 ${
+                          className={`w-full px-3 py-1.5 text-xs font-medium text-left hover:bg-white/10 transition-colors duration-200 overflow-hidden ${
                             assetType === 'news' ? 'text-white bg-white/10' : 'text-white/70'
                           }`}
                         >
-                          News
+                          <span>News</span>
+                          <span className="text-xs text-white/50 ml-1">(Coming Soon)</span>
                         </button>
                         <button
                           onClick={() => {
@@ -3937,11 +3939,12 @@ export const Scope = ({
                             setComingSoonType('sports');
                             setShowComingSoon(true);
                           }}
-                          className={`w-full px-3 py-1.5 text-sm font-medium text-left hover:bg-white/10 transition-colors duration-200 ${
+                          className={`w-full px-3 py-1.5 text-xs font-medium text-left hover:bg-white/10 transition-colors duration-200 overflow-hidden ${
                             assetType === 'sports' ? 'text-white bg-white/10' : 'text-white/70'
                           }`}
                         >
-                          Sports
+                          <span>Sports</span>
+                          <span className="text-xs text-white/50 ml-1">(Coming Soon)</span>
                         </button>
                       </div>
                     )}

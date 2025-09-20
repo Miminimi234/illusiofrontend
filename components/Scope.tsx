@@ -1152,6 +1152,19 @@ const TokenCardBase: React.FC<CardProps> = React.memo(({ token, visibleMintsRef,
               </a>
             )}
             
+            {/* Solscan Icon - Show for all tokens */}
+            <a
+              href={`https://solscan.io/token/${token.mint}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center w-6 h-6 rounded-md bg-white/5 hover:bg-white/10 transition-colors duration-200 cursor-pointer"
+              title="View on Solscan"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-purple-400">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+              </svg>
+            </a>
+            
             {token.twitter && (
               <a
                 href={token.twitter}
@@ -1175,7 +1188,7 @@ const TokenCardBase: React.FC<CardProps> = React.memo(({ token, visibleMintsRef,
                 title="Telegram"
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-gray-300">
-                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                  <path d="M21.944 2.2L21.944 2.2c-.294-.293-.766-.369-1.156-.186L2.237 9.7c-.781.368-.781 1.432 0 1.8l5.339 2.532c.476.226 1.042.09 1.379-.332l2.787-3.497c.19-.238.527-.238.717 0s.19.625 0 .863l-2.787 3.497c-.337.422-.226 1.042.332 1.379l2.532 5.339c.368.781 1.432.781 1.8 0l7.686-18.551c.183-.39.107-.862-.186-1.156z"/>
                 </svg>
               </a>
             )}

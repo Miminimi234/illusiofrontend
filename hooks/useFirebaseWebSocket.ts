@@ -301,6 +301,13 @@ export const useFirebaseWebSocket = () => {
   const [loading, setLoading] = useState(true);
   const [pendingTokens, setPendingTokens] = useState<TokenData[]>([]);
   
+  // Store original tokens for reset functionality
+  const [originalTokens, setOriginalTokens] = useState<TokenData[]>([]);
+  const [isSearchMode, setIsSearchMode] = useState(false);
+  
+  // Use ref for search mode to avoid closure issues in Firebase listener
+  const isSearchModeRef = useRef(false);
+  
   const listenerRef = useRef<any>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttempts = useRef(0);
@@ -319,9 +326,21 @@ export const useFirebaseWebSocket = () => {
         return;
       }
 
+      // Stop processing if we're in search mode
+      if (isSearchModeRef.current) {
+        console.log('🔥 STOPPING token processing - Search mode active');
+        return;
+      }
+
       const token = newTokens[index];
       
       setTokens(prevTokens => {
+        // Double check search mode before updating tokens
+        if (isSearchModeRef.current) {
+          console.log('🔥 SEARCH MODE - Skipping token processing');
+          return prevTokens;
+        }
+        
         const existingMints = new Set(prevTokens.map(t => t.mint));
         if (existingMints.has(token.mint)) {
           // Skip if token already exists
@@ -334,8 +353,7 @@ export const useFirebaseWebSocket = () => {
           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
           .slice(0, 100); // Keep only most recent 100 tokens
 
-
-        // Process next token after a 1 second delay
+        // Process next token after a 1 second delay (only if not in search mode)
         tokenProcessingTimeoutRef.current = setTimeout(() => {
           processNextToken(index + 1);
         }, 1000); // 1000ms (1 second) delay between tokens
@@ -530,16 +548,23 @@ export const useFirebaseWebSocket = () => {
 
             // console.log('🔥 Transformed tokens for display:', transformedTokens.length, transformedTokens.slice(0, 2));
             
-            // Always process tokens one by one for smooth animation
-            // On initial load, all tokens are "new", on subsequent loads, only truly new tokens are processed
+            // Check if we're in search mode - if so, SKIP token updates
             setTokens(prevTokens => {
+              // If in search mode, don't update tokens - keep the current search result
+              if (isSearchModeRef.current) {
+                console.log('🔥 SEARCH MODE ACTIVE - Ignoring Firebase token updates, isSearchModeRef.current:', isSearchModeRef.current);
+                console.log('🔥 Keeping current tokens:', prevTokens.length, 'tokens');
+                return prevTokens; // Keep current tokens (search result)
+              }
+              
+              // Normal mode - process new tokens one by one for smooth animation
               const existingMints = new Set(prevTokens.map(t => t.mint));
               const newTokens = transformedTokens.filter(token => !existingMints.has(token.mint));
               
               if (newTokens.length > 0) {
+                console.log('🔥 Processing', newTokens.length, 'new tokens');
                 // Process tokens one by one with animation timing
                 processTokensOneByOne(newTokens);
-              } else {
               }
               
               return prevTokens; // Don't update immediately, let processTokensOneByOne handle it
@@ -553,7 +578,12 @@ export const useFirebaseWebSocket = () => {
             setLoading(false);
             reconnectAttempts.current = 0; // Reset on successful connection
           } else {
-            setTokens([]);
+            // Only clear tokens if not in search mode
+            if (!isSearchModeRef.current) {
+              setTokens([]);
+            } else {
+              console.log('🔥 SEARCH MODE - Not clearing tokens on empty Firebase data');
+            }
             setConnectionStatus(prev => ({
               ...prev,
               isConnected: true,
@@ -651,12 +681,98 @@ export const useFirebaseWebSocket = () => {
 
   // Debug logging removed for production
 
+  // Add a searched token to the list (force add even if exists)
+  const addToken = useCallback((newToken: any, forceAdd: boolean = true) => {
+    console.log('🔥 addToken called with:', newToken, 'forceAdd:', forceAdd);
+    
+    // If in search mode, ignore regular addToken calls
+    if (isSearchModeRef.current) {
+      console.log('🔥 SEARCH MODE - Ignoring regular addToken call');
+      return;
+    }
+    
+    setTokens(prevTokens => {
+      console.log('🔥 Current tokens count:', prevTokens.length);
+      const existingMints = new Set(prevTokens.map(t => t.mint));
+      
+      if (existingMints.has(newToken.mint) && !forceAdd) {
+        console.log('🔥 Token already exists and forceAdd is false, not adding');
+        return prevTokens; // Don't add if already exists and not forcing
+      }
+      
+      if (existingMints.has(newToken.mint) && forceAdd) {
+        console.log('🔥 Token already exists but forcing add - removing old and adding new');
+        // Remove the existing token first, then add the new one
+        const withoutExisting = prevTokens.filter(t => t.mint !== newToken.mint);
+        const updated = [newToken, ...withoutExisting]
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+          .slice(0, 100); // Keep only most recent 100 tokens
+        
+        console.log('🔥 Updated tokens count (force add):', updated.length);
+        return updated;
+      }
+      
+      console.log('🔥 Adding new token to list');
+      // Add the new token to the beginning
+      const updated = [newToken, ...prevTokens]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 100); // Keep only most recent 100 tokens
+      
+      console.log('🔥 Updated tokens count:', updated.length);
+      return updated;
+    });
+  }, []);
+
+  // Replace all tokens with just the searched token
+  const replaceWithSearchToken = useCallback((searchToken: any) => {
+    console.log('🔥 REPLACING ALL TOKENS with search token:', searchToken);
+    
+    // Clear any pending token processing
+    if (tokenProcessingTimeoutRef.current) {
+      clearTimeout(tokenProcessingTimeoutRef.current);
+      tokenProcessingTimeoutRef.current = null;
+      console.log('🔥 Cleared pending token processing');
+    }
+    
+    setTokens(prevTokens => {
+      // Store original tokens for reset
+      if (!isSearchMode) {
+        console.log('🔥 Storing original tokens for reset:', prevTokens.length);
+        console.log('🔥 ENTERING SEARCH MODE - ALL token updates blocked');
+        console.log('🔥 Current tokens before search:', prevTokens.length);
+        setOriginalTokens(prevTokens);
+        setIsSearchMode(true);
+        isSearchModeRef.current = true;
+        console.log('🔥 isSearchModeRef.current set to:', isSearchModeRef.current);
+        console.log('🔥 Search mode protection ACTIVATED');
+      }
+      
+      // Return only the searched token
+      return [searchToken];
+    });
+  }, [isSearchMode]);
+
+  // Reset to original tokens
+  const resetToOriginalTokens = useCallback(() => {
+    console.log('🔥 RESETTING to original tokens:', originalTokens.length);
+    console.log('🔥 Exiting search mode - Firebase streaming will resume');
+    setTokens(originalTokens);
+    setIsSearchMode(false);
+    isSearchModeRef.current = false;
+    console.log('🔥 isSearchModeRef.current set to:', isSearchModeRef.current);
+    setOriginalTokens([]);
+  }, [originalTokens]);
+
   return {
     tokens,
     connectionStatus,
     loading,
     reconnect,
     disconnect,
-    connect
+    connect,
+    addToken,
+    replaceWithSearchToken,
+    resetToOriginalTokens,
+    isSearchMode
   };
 };

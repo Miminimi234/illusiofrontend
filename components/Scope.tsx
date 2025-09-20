@@ -2645,76 +2645,6 @@ function InsightsColumn({
               )}
             </InsightCard>
 
-            {/* Retrocausality Section - AI Powered */}
-            <InsightCard 
-              title="Retrocausality" 
-              icon={
-                <div className="flex items-center gap-1">
-                  <svg className="w-3 h-3 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  {aiLoading && (
-                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
-                  )}
-                </div>
-              }
-            >
-              <div className="grid grid-cols-2 gap-x-6 gap-y-2">
-                <div>
-                  <div className="text-white/50 text-[12px] font-mono mb-1">Future-echo Δ</div>
-                  <div className="text-white text-[12px] font-mono flex items-center gap-1">
-                    {aiAnalysis ? (
-                      <>
-                        <span className={
-                          aiAnalysis.futureEchoDelta === 'Strong' ? 'text-green-400' : 
-                          aiAnalysis.futureEchoDelta === 'Medium' ? 'text-yellow-400' : 
-                          'text-red-400'
-                        }>
-                          {aiAnalysis.futureEchoDelta === 'Strong' ? '▲' : 
-                           aiAnalysis.futureEchoDelta === 'Medium' ? '→' : '▼'}
-                        </span>
-                        {aiAnalysis.futureEchoDelta}
-                      </>
-                    ) : metrics?.futureEchoDelta && metrics.futureEchoDelta !== "N/A" ? (
-                      <>
-                        <span className={
-                          metrics.futureEchoDelta === 'Strong' ? 'text-green-400' : 
-                          metrics.futureEchoDelta === 'Medium' ? 'text-yellow-400' : 
-                          'text-red-400'
-                        }>
-                          {metrics.futureEchoDelta === 'Strong' ? '▲' : 
-                           metrics.futureEchoDelta === 'Medium' ? '→' : '▼'}
-                        </span>
-                        {metrics.futureEchoDelta}
-                      </>
-                    ) : (
-                      "N/A"
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-white/50 text-[12px] font-mono mb-1">Scenario bias</div>
-                  <div className={`inline-flex items-center px-2 py-1 rounded-full text-[11px] font-mono border ${
-                    aiAnalysis ? (
-                      aiAnalysis.scenarioBias === 'Bullish' 
-                        ? 'bg-green-500/15 text-green-300 border-green-500/30' 
-                        : aiAnalysis.scenarioBias === 'Bearish' 
-                          ? 'bg-red-500/15 text-red-300 border-red-500/30' 
-                          : 'bg-yellow-500/15 text-yellow-300 border-yellow-500/30'
-                    ) : (
-                      metrics?.scenarioBias === 'Bullish' 
-                        ? 'bg-green-500/15 text-green-300 border-green-500/30' 
-                        : metrics?.scenarioBias === 'Bearish' 
-                          ? 'bg-red-500/15 text-red-300 border-red-500/30' 
-                          : 'bg-yellow-500/15 text-yellow-300 border-yellow-500/30'
-                    )
-                  }`}>
-                    {aiAnalysis?.scenarioBias || metrics?.scenarioBias || "N/A"}
-                  </div>
-                </div>
-              </div>
-            </InsightCard>
-
             {/* Momentum Section */}
             <InsightCard 
               title="Momentum" 
@@ -2775,7 +2705,10 @@ export const Scope = ({
   isHoverPaused,
   queuedTokens,
   newTokenMint,
-  onClose
+  onClose,
+  onAddToken,
+  onResetTokens,
+  isSearchMode
 }: { 
   isOpen: boolean;
   tokens: any[];
@@ -2792,6 +2725,9 @@ export const Scope = ({
   queuedTokens: any[];
   newTokenMint: string | null;
   onClose: () => void;
+  onAddToken?: (token: any) => void;
+  onResetTokens?: () => void;
+  isSearchMode?: boolean;
 }) => {
   // Track visible mints for performance optimization
   const visibleMintsRef = useRef<Set<string>>(new Set());
@@ -3686,37 +3622,130 @@ export const Scope = ({
             >
               <SearchDropdown 
                 onTokenSelect={(token) => {
-                  // Convert the search token to the format expected by SCOPE
+                  console.log('🔍 Search token selected:', token);
+                  
+                  // Convert the search token to the format expected by SCOPE (TokenData interface)
                   const scopeToken = {
-                    mint: token.id,
+                    // Basic token info
+                    address: token.id, // Using id as address
+                    mint: token.id, // Primary identifier
                     name: token.name,
                     symbol: token.symbol,
-                    image_url: token.icon,
-                    price_usd: token.usdPrice,
-                    marketcap: token.mcap,
-                    volume_24h: token.stats24h?.volume,
-                    liquidity: token.liquidity,
+                    imageUrl: token.icon, // Fixed field name
                     decimals: token.decimals,
-                    status: 'active',
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
+                    dev: token.dev || 'unknown',
+                    circSupply: token.circSupply || 0,
+                    totalSupply: token.totalSupply || 0,
+                    tokenProgram: token.tokenProgram || 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+                    launchpad: token.launchpad,
+                    metaLaunchpad: token.launchpad,
+                    partnerConfig: token.partnerConfig,
+                    
+                    // Pool info
+                    firstPoolId: token.firstPool?.id,
+                    firstPoolCreatedAt: token.firstPool?.createdAt || new Date().toISOString(),
+                    
+                    // Holder info
+                    holderCount: token.holderCount || 0,
+                    
+                    // Audit info
+                    audit: token.audit || {
+                      isSus: false,
+                      mintAuthorityDisabled: false,
+                      freezeAuthorityDisabled: false,
+                      devBalancePercentage: 0,
+                      topHoldersPercentage: 0,
+                      devMigrations: 0,
+                      blockaidHoneypot: false,
+                      blockaidRugpull: false
+                    },
+                    
+                    // Organic score
+                    organicScore: token.organicScore || 0,
+                    organicScoreLabel: token.organicScoreLabel || 'Unknown',
+                    tags: token.tags || [],
+                    
+                    // Verification
+                    isVerified: token.isVerified || false,
+                    cexes: token.cexes || [],
+                    
+                    // Market data
+                    fdv: token.fdv,
+                    mcap: token.mcap,
+                    usdPrice: token.usdPrice,
+                    priceBlockId: token.priceBlockId,
+                    liquidity: token.liquidity,
+                    
+                    // Stats
+                    stats5m: token.stats5m,
+                    stats1h: token.stats1h,
+                    stats6h: token.stats6h,
+                    stats24h: token.stats24h,
+                    
+                    // Timestamps
+                    createdAt: new Date().toISOString(), // Fixed field name
+                    updatedAt: token.updatedAt || new Date().toISOString()
                   };
+                  
+                  console.log('🔍 Converted scope token:', scopeToken);
+                  console.log('🔍 Token timestamp check:', {
+                    createdAt: scopeToken.createdAt,
+                    now: new Date().toISOString(),
+                    parsedTime: new Date(scopeToken.createdAt).getTime(),
+                    currentTime: Date.now()
+                  });
+                  
+                  // REPLACE ALL TOKENS with just the searched token
+                  if (onAddToken) {
+                    console.log('🔍 REPLACING ALL TOKENS with searched token');
+                    onAddToken(scopeToken);
+                    
+                    // Add a small delay to let the token be replaced, then log the result
+                    setTimeout(() => {
+                      console.log('🔍 Tokens after REPLACE:', tokens.length);
+                      console.log('🔍 Should be only 1 token:', tokens.slice(0, 3).map(t => ({ 
+                        mint: t.mint, 
+                        name: t.name, 
+                        createdAt: t.createdAt 
+                      })));
+                    }, 100);
+                  } else {
+                    console.log('🔍 onAddToken callback not available');
+                  }
                   
                   // Focus on the selected token
                   setFocusToken(scopeToken);
                   
-                  // Scroll to the token if it exists in the current tokens list
-                  const existingToken = tokens.find(t => t.mint === token.id);
-                  if (existingToken) {
-                    // Find the token card element and scroll to it
-                    const tokenElement = document.querySelector(`[data-mint="${token.id}"]`);
-                    if (tokenElement) {
-                      tokenElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
+                  // Scroll to the token
+                  const tokenElement = document.querySelector(`[data-mint="${token.id}"]`);
+                  if (tokenElement) {
+                    tokenElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
                   }
                 }}
                 className="w-full"
               />
+              
+              {/* RED RESET BUTTON - Only show in search mode, next to search input */}
+              <AnimatePresence>
+                {isSearchMode && onResetTokens && (
+                  <motion.button
+                  onClick={() => {
+                    console.log('🔴 RESET BUTTON CLICKED');
+                    onResetTokens();
+                  }}
+                  className="ml-2 px-3 py-2 bg-red-500/20 hover:bg-red-500/40 text-red-400 hover:text-red-300 rounded-lg border border-red-500/40 hover:border-red-400 transition-all duration-200 animate-pulse flex-shrink-0 font-medium text-sm"
+                  title="Reset to original tokens"
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0, opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Reset
+                  </motion.button>
+                )}
+              </AnimatePresence>
             </motion.div>
           </div>
         
@@ -3784,8 +3813,15 @@ export const Scope = ({
             <div className="flex border-b border-neutral-800/60">
               <div className="flex-1 text-center py-4 border-r border-neutral-800/60 relative">
                 <h2 className="text-lg font-bold uppercase tracking-wider text-white">
-                  {assetType === 'stocks' ? 'Stocks' : assetType === 'news' ? 'News' : 'Fresh Mints'}
+                  {isSearchMode ? 'Search Result' : (assetType === 'stocks' ? 'Stocks' : assetType === 'news' ? 'News' : 'Fresh Mints')}
                 </h2>
+                
+                {/* Search mode indicator */}
+                {isSearchMode && (
+                  <div className="absolute top-4 right-16 px-2 py-1 bg-yellow-500/20 text-yellow-400 text-xs rounded border border-yellow-500/40">
+                    Search Mode
+                  </div>
+                )}
                 
                 {/* Loading indicator for stocks */}
                 {isLoadingStocks && (
@@ -3809,7 +3845,7 @@ export const Scope = ({
                   </div>
                   
                   {/* Filter Button */}
-                  {assetType === 'crypto' && (
+                  {assetType === 'crypto' && !isSearchMode && (
                     <button
                       onClick={() => setShowFilterPopup(true)}
                       className="p-1.5 bg-white/10 hover:bg-white/20 text-white/80 hover:text-white rounded-md border border-white/20 transition-all duration-200"
@@ -3819,6 +3855,7 @@ export const Scope = ({
                       </svg>
                     </button>
                   )}
+
                 </div>
                     
                     {isDropdownOpen && (
@@ -4938,6 +4975,9 @@ const ScopeWithWatchlist: React.FC<{
     isHoverPaused: boolean;
     queuedTokens: any[];
     newTokenMint: string | null;
+    onAddToken?: (token: any) => void;
+    onResetTokens?: () => void;
+    isSearchMode?: boolean;
   }> = (props) => {
     return (
       <WatchlistProvider>
@@ -4946,5 +4986,5 @@ const ScopeWithWatchlist: React.FC<{
     );
   };
   
-  export default ScopeWithWatchlist;
+export default ScopeWithWatchlist;
   

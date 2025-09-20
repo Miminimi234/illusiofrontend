@@ -44,16 +44,16 @@ Add these variables to your `server/.env` file:
 
 ```env
 # Firebase Configuration
-FIREBASE_PROJECT_ID=your-firebase-project-id
+FIREBASE_PROJECT_ID=illusio-317d3
 FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYOUR_PRIVATE_KEY_HERE\n-----END PRIVATE KEY-----\n"
-FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@your-project-id.iam.gserviceaccount.com
-FIREBASE_DATABASE_URL=https://your-project-id-default-rtdb.firebaseio.com/
+FIREBASE_CLIENT_EMAIL=firebase-adminsdk-fbsvc@illusio-317d3.iam.gserviceaccount.com
+FIREBASE_DATABASE_URL=https://illusio-317d3-default-rtdb.firebaseio.com/
 ```
 
 **Important Notes:**
-- Replace `your-firebase-project-id` with your actual project ID
+- Use the project ID: `illusio-317d3`
 - The private key should include the `\n` characters for line breaks
-- The client email format is: `firebase-adminsdk-xxxxx@your-project-id.iam.gserviceaccount.com`
+- Use the client email: `firebase-adminsdk-fbsvc@illusio-317d3.iam.gserviceaccount.com`
 
 ### **5. Install Dependencies**
 

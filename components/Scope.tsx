@@ -2558,10 +2558,7 @@ function InsightsColumn({
                       <div className="animate-spin rounded-full h-3 w-3 border-b border-white/60"></div>
                     ) : (
                       <>
-                        <span>{aiForecast?.recommendation || "N/A"}</span>
-                        {aiForecast && !forecastLoading && (
-                          <span className="text-blue-400 text-xs ml-2" title="Algorithm Generated">🧠</span>
-                        )}
+                        <span>{aiForecast?.recommendation?.replace('_', ' ') || "N/A"}</span>
                       </>
                     )}
                   </div>
@@ -3672,7 +3669,9 @@ export const Scope = ({
                     // Market data
                     fdv: token.fdv,
                     mcap: token.mcap,
+                    marketCap: token.mcap, // Add this for insights compatibility
                     usdPrice: token.usdPrice,
+                    price: token.usdPrice, // Add this for insights compatibility
                     priceBlockId: token.priceBlockId,
                     liquidity: token.liquidity,
                     
@@ -3681,13 +3680,28 @@ export const Scope = ({
                     stats1h: token.stats1h,
                     stats6h: token.stats6h,
                     stats24h: token.stats24h,
+                    volume24h: token.stats24h?.volume, // Add this for insights compatibility
                     
                     // Timestamps
                     createdAt: new Date().toISOString(), // Fixed field name
-                    updatedAt: token.updatedAt || new Date().toISOString()
+                    created_at: new Date().toISOString(), // Add this for insights compatibility
+                    updatedAt: token.updatedAt || new Date().toISOString(),
+                    
+                    // Status fields for insights compatibility
+                    is_on_curve: false, // Search tokens are typically not on curve
+                    status: 'active' // Set as active by default
                   };
                   
                   console.log('🔍 Converted scope token:', scopeToken);
+                  console.log('🔍 Token data for insights:', {
+                    mint: scopeToken.mint,
+                    marketCap: scopeToken.marketCap,
+                    price: scopeToken.price,
+                    volume24h: scopeToken.volume24h,
+                    imageUrl: scopeToken.imageUrl,
+                    symbol: scopeToken.symbol,
+                    name: scopeToken.name
+                  });
                   console.log('🔍 Token timestamp check:', {
                     createdAt: scopeToken.createdAt,
                     now: new Date().toISOString(),

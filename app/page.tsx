@@ -1,6 +1,7 @@
 "use client";
 import dynamic from "next/dynamic";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { useFirebaseWebSocket } from "@/hooks/useFirebaseWebSocket";
 import { AnimatePresence } from "framer-motion";
@@ -22,6 +23,7 @@ const Manifesto = dynamic(() => import("@/components/Manifesto"), { ssr: false }
 const CornerLogo = dynamic(() => import("@/components/CornerLogo"), { ssr: false });
 
 export default function Page() {
+  const router = useRouter();
   const [userBirthday, setUserBirthday] = useState<Date | null>(null);
   const [zodiacSign, setZodiacSign] = useState<string>("");
   const [showMainPage, setShowMainPage] = useState(false);
@@ -31,6 +33,7 @@ export default function Page() {
   const [isManifestoOpen, setIsManifestoOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [cornerLogoVisible, setCornerLogoVisible] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Solana monitoring - now using Firebase WebSocket
   const {
@@ -105,25 +108,17 @@ export default function Page() {
     }
   }, [isScopeOpen, isNavigationHubOpen, isOracleHubOpen, isManifestoOpen]);
 
-  // Check localStorage on component mount
+  // Initialize basic state first
   useEffect(() => {
-    console.log('🔍 Page useEffect running - checking localStorage...');
+    console.log('🔍 Initial useEffect running...');
     
     try {
       const savedBirthday = localStorage.getItem('userBirthday');
       const savedZodiacSign = localStorage.getItem('zodiacSign');
-      const savedScopeOpen = localStorage.getItem('isScopeOpen');
-      const savedNavigationOpen = localStorage.getItem('isNavigationHubOpen');
-      const savedOracleOpen = localStorage.getItem('isOracleHubOpen');
-      const savedManifestoOpen = localStorage.getItem('isManifestoOpen');
       
       console.log('🔍 localStorage values:', {
         savedBirthday: !!savedBirthday,
-        savedZodiacSign: !!savedZodiacSign,
-        savedScopeOpen,
-        savedNavigationOpen,
-        savedOracleOpen,
-        savedManifestoOpen
+        savedZodiacSign: !!savedZodiacSign
       });
       
       if (savedBirthday && savedZodiacSign) {
@@ -133,30 +128,54 @@ export default function Page() {
         setShowMainPage(true);
       } else {
         console.log('🔍 No saved data, will show birthday entry...');
-        // If no saved data, still set loading to false so we can show birthday entry
         setShowMainPage(false);
       }
       
-      // Restore UI states from localStorage
-      if (savedScopeOpen) {
-        setIsScopeOpen(savedScopeOpen === 'true');
-      }
-      if (savedNavigationOpen) {
-        setIsNavigationHubOpen(savedNavigationOpen === 'true');
-      }
-      if (savedOracleOpen) {
-        setIsOracleHubOpen(savedOracleOpen === 'true');
-      }
-      if (savedManifestoOpen) {
-        setIsManifestoOpen(savedManifestoOpen === 'true');
-      }
-      
-      console.log('🔍 Setting isLoading to false...');
+      console.log('🔍 Setting isLoading to false and initialized to true...');
       setIsLoading(false);
+      setIsInitialized(true);
     } catch (error) {
-      console.error('🔍 Error in useEffect:', error);
+      console.error('🔍 Error in initial useEffect:', error);
       setIsLoading(false);
+      setIsInitialized(true);
     }
+  }, []);
+
+  // Handle URL params after initialization
+  useEffect(() => {
+    if (!isInitialized || typeof window === 'undefined') return;
+    
+    console.log('🔍 Handling URL params...');
+    const urlParams = new URLSearchParams(window.location.search);
+    const hub = urlParams.get('hub');
+    if (hub) {
+      console.log('🔍 URL hub parameter:', hub);
+      switch (hub) {
+        case 'scope':
+          setIsScopeOpen(true);
+          break;
+        case 'navigation':
+          setIsNavigationHubOpen(true);
+          break;
+        case 'oracle':
+          setIsOracleHubOpen(true);
+          break;
+        case 'manifesto':
+          setIsManifestoOpen(true);
+          break;
+      }
+    }
+  }, [isInitialized]);
+
+  // Fallback timeout to ensure loading is cleared
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      console.log('🔍 Loading timeout fallback - setting isLoading to false');
+      setIsLoading(false);
+      setIsInitialized(true);
+    }, 1000); // 1 second timeout
+
+    return () => clearTimeout(timer);
   }, []);
 
   // Initialize Oracle service to run 24/7
@@ -206,25 +225,41 @@ export default function Page() {
   };
 
 
-  // Functions to save UI states to localStorage
+  // Functions to handle hub navigation with URL routing
   const saveScopeState = (isOpen: boolean) => {
     setIsScopeOpen(isOpen);
-    localStorage.setItem('isScopeOpen', isOpen.toString());
+    if (isOpen) {
+      router.push('/scope');
+    } else {
+      router.push('/');
+    }
   };
 
   const saveNavigationState = (isOpen: boolean) => {
     setIsNavigationHubOpen(isOpen);
-    localStorage.setItem('isNavigationHubOpen', isOpen.toString());
+    if (isOpen) {
+      router.push('/navigation');
+    } else {
+      router.push('/');
+    }
   };
 
   const saveOracleState = (isOpen: boolean) => {
     setIsOracleHubOpen(isOpen);
-    localStorage.setItem('isOracleHubOpen', isOpen.toString());
+    if (isOpen) {
+      router.push('/oracle');
+    } else {
+      router.push('/');
+    }
   };
 
   const saveManifestoState = (isOpen: boolean) => {
     setIsManifestoOpen(isOpen);
-    localStorage.setItem('isManifestoOpen', isOpen.toString());
+    if (isOpen) {
+      router.push('/manifesto');
+    } else {
+      router.push('/');
+    }
   };
 
   // Show loading state while checking localStorage

@@ -8,7 +8,19 @@ import ImageWithFallback from './ImageWithFallback';
 import HoverImagePreview from './HoverImagePreview';
 import CreationTimeDisplay from './CreationTimeDisplay';
 import SearchDropdown from './SearchDropdown';
-import { chatService, ChatMessage } from '../utils/chatService';
+import { serverChatService } from '../utils/serverChatService';
+import { simpleGrokService, ChatMessage } from '../utils/simpleGrokService';
+import { aiForecastService, ForecastData } from '../utils/aiForecastService';
+
+// Conversation interface
+interface Conversation {
+  id: string;
+  title: string;
+  messages: ChatMessage[];
+  timestamp: number;
+  companionName?: string;
+  tokenMint?: string;
+}
 
 // Helper function to get companion colors
 const getCompanionColor = (companionName: string) => {
@@ -458,219 +470,7 @@ const formatNumber = (value: number | string | null | undefined): string => {
 // Keep formatMarketcap for backward compatibility
 const formatMarketcap = formatNumber;
 
-// Simple AI Forecast Algorithm
-interface ForecastData {
-  score: number; // -100 to +100 (negative = bearish, positive = bullish)
-  confidence: number; // 0 to 100
-  signals: string[];
-  recommendation: 'STRONG_BUY' | 'BUY' | 'HOLD' | 'SELL' | 'STRONG_SELL';
-  reasoning: string;
-}
 
-const calculateForecast = (token: any): ForecastData => {
-  const signals: string[] = [];
-  let score = 0;
-  let confidence = 0;
-  
-  // Market Cap Analysis (0-25 points)
-  const marketCap = token.marketCap || 0;
-  if (marketCap > 1000000) { // > $1M
-    score += 15;
-    signals.push('Large market cap indicates stability');
-    confidence += 20;
-  } else if (marketCap > 100000) { // > $100K
-    score += 10;
-    signals.push('Moderate market cap shows growth potential');
-    confidence += 15;
-  } else if (marketCap > 10000) { // > $10K
-    score += 5;
-    signals.push('Small market cap - high risk/reward');
-    confidence += 10;
-  } else {
-    score -= 10;
-    signals.push('Very small market cap - high risk');
-    confidence += 5;
-  }
-  
-  // Volume Analysis (0-20 points)
-  const volume24h = token.volume24h || 0;
-  const volumeRatio = marketCap > 0 ? volume24h / marketCap : 0;
-  
-  if (volumeRatio > 0.5) { // High volume relative to market cap
-    score += 20;
-    signals.push('High trading volume indicates strong interest');
-    confidence += 25;
-  } else if (volumeRatio > 0.1) {
-    score += 10;
-    signals.push('Moderate trading volume');
-    confidence += 15;
-  } else if (volumeRatio > 0.01) {
-    score += 5;
-    signals.push('Low trading volume');
-    confidence += 10;
-  } else {
-    score -= 5;
-    signals.push('Very low trading volume - low liquidity');
-    confidence += 5;
-  }
-  
-  // Liquidity Analysis (0-15 points)
-  const liquidity = token.liquidity || 0;
-  const liquidityRatio = marketCap > 0 ? liquidity / marketCap : 0;
-  
-  if (liquidityRatio > 0.3) {
-    score += 15;
-    signals.push('High liquidity - easy to trade');
-    confidence += 20;
-  } else if (liquidityRatio > 0.1) {
-    score += 10;
-    signals.push('Good liquidity');
-    confidence += 15;
-  } else if (liquidityRatio > 0.05) {
-    score += 5;
-    signals.push('Moderate liquidity');
-    confidence += 10;
-  } else {
-    score -= 5;
-    signals.push('Low liquidity - potential slippage');
-    confidence += 5;
-  }
-  
-  // Holder Analysis (0-15 points)
-  const holderCount = token.holderCount || 0;
-  if (holderCount > 1000) {
-    score += 15;
-    signals.push('Large holder base indicates strong community');
-    confidence += 20;
-  } else if (holderCount > 100) {
-    score += 10;
-    signals.push('Good holder distribution');
-    confidence += 15;
-  } else if (holderCount > 10) {
-    score += 5;
-    signals.push('Small but growing holder base');
-    confidence += 10;
-  } else {
-    score -= 5;
-    signals.push('Very few holders - high concentration risk');
-    confidence += 5;
-  }
-  
-  // Dev Holding Analysis (0-20 points)
-  const devHolding = token.audit?.devBalancePercentage || 0;
-  if (devHolding < 5) {
-    score += 20;
-    signals.push('Low dev holding - good for decentralization');
-    confidence += 25;
-  } else if (devHolding < 20) {
-    score += 10;
-    signals.push('Moderate dev holding');
-    confidence += 15;
-  } else if (devHolding < 50) {
-    score -= 5;
-    signals.push('High dev holding - potential rug risk');
-    confidence += 10;
-  } else {
-    score -= 15;
-    signals.push('Very high dev holding - major rug risk');
-    confidence += 5;
-  }
-  
-  // Top Holders Analysis (0-15 points)
-  const topHolders = token.audit?.topHoldersPercentage || 0;
-  if (topHolders < 20) {
-    score += 15;
-    signals.push('Well distributed holdings');
-    confidence += 20;
-  } else if (topHolders < 50) {
-    score += 5;
-    signals.push('Moderate concentration');
-    confidence += 15;
-  } else {
-    score -= 10;
-    signals.push('High concentration - whale risk');
-    confidence += 10;
-  }
-  
-  // Organic Score Analysis (0-10 points)
-  const organicScore = token.organicScore || 0;
-  if (organicScore > 0.7) {
-    score += 10;
-    signals.push('High organic activity');
-    confidence += 15;
-  } else if (organicScore > 0.3) {
-    score += 5;
-    signals.push('Moderate organic activity');
-    confidence += 10;
-  } else {
-    score -= 5;
-    signals.push('Low organic activity - potential bot activity');
-    confidence += 5;
-  }
-  
-  // Age Analysis (0-10 points)
-  const createdAt = new Date(token.createdAt || Date.now());
-  const ageInHours = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60);
-  
-  if (ageInHours < 1) {
-    score += 10;
-    signals.push('Very fresh token - early opportunity');
-    confidence += 15;
-  } else if (ageInHours < 24) {
-    score += 5;
-    signals.push('Recent token - still early');
-    confidence += 10;
-  } else if (ageInHours < 168) { // 1 week
-    score += 2;
-    signals.push('Established token');
-    confidence += 5;
-  } else {
-    score -= 5;
-    signals.push('Older token - may have missed initial momentum');
-    confidence += 5;
-  }
-  
-  // Calculate final recommendation
-  let recommendation: 'STRONG_BUY' | 'BUY' | 'HOLD' | 'SELL' | 'STRONG_SELL';
-  if (score >= 60) {
-    recommendation = 'STRONG_BUY';
-  } else if (score >= 30) {
-    recommendation = 'BUY';
-  } else if (score >= -30) {
-    recommendation = 'HOLD';
-  } else if (score >= -60) {
-    recommendation = 'SELL';
-  } else {
-    recommendation = 'STRONG_SELL';
-  }
-  
-  // Generate reasoning
-  const positiveSignals = signals.filter(s => s.includes('High') || s.includes('Good') || s.includes('Large') || s.includes('Low dev') || s.includes('Well distributed') || s.includes('fresh') || s.includes('early'));
-  const negativeSignals = signals.filter(s => s.includes('Very low') || s.includes('Low') || s.includes('High dev') || s.includes('High concentration') || s.includes('whale risk') || s.includes('rug risk'));
-  
-  let reasoning = '';
-  if (positiveSignals.length > negativeSignals.length) {
-    reasoning = `Strong bullish signals: ${positiveSignals.slice(0, 3).join(', ')}. `;
-    if (negativeSignals.length > 0) {
-      reasoning += `Consider: ${negativeSignals.slice(0, 2).join(', ')}.`;
-    }
-  } else if (negativeSignals.length > positiveSignals.length) {
-    reasoning = `Bearish concerns: ${negativeSignals.slice(0, 3).join(', ')}. `;
-    if (positiveSignals.length > 0) {
-      reasoning += `Positive: ${positiveSignals.slice(0, 2).join(', ')}.`;
-    }
-  } else {
-    reasoning = `Mixed signals. Positive: ${positiveSignals.slice(0, 2).join(', ')}. Negative: ${negativeSignals.slice(0, 2).join(', ')}.`;
-  }
-  
-  return {
-    score: Math.max(-100, Math.min(100, score)),
-    confidence: Math.max(0, Math.min(100, confidence)),
-    signals,
-    recommendation,
-    reasoning
-  };
-};
 
 // Typing Indicator Component
 const TypingIndicator: React.FC<{ isTyping: boolean; companionName?: string }> = ({ isTyping, companionName }) => {
@@ -1588,6 +1388,7 @@ function InsightsColumn({
     topHoldersPercentage: number;
     devHoldingPercentage: number;
     totalSupply: number;
+    createdAt: string | null;
     lastUpdate: Date;
   } | null>(null);
   const [jupiterLoading, setJupiterLoading] = useState(false);
@@ -1615,6 +1416,7 @@ function InsightsColumn({
       if (response.ok) {
         const data = await response.json();
         const tokenData = data[0];
+        
         
         if (tokenData) {
           // Use Jupiter's provided market cap or calculate if not available
@@ -1673,21 +1475,6 @@ function InsightsColumn({
 
           const timeframeData = getTimeframeData(selectedTimeframe);
           
-          // Jupiter market data debug
-          console.log({
-            mint: mint.slice(0, 8),
-            price: tokenData.usdPrice,
-            marketCap: tokenData.mcap,
-            liquidity: tokenData.liquidity,
-            priceChange: timeframeData.priceChange,
-            volume: timeframeData.volume,
-            holderCount: tokenData.holderCount,
-            topHoldersPercentage: tokenData.audit?.topHoldersPercentage || 0,
-            devHoldingPercentage: tokenData.audit?.devBalancePercentage || 0,
-            calculatedMarketCap: marketCap,
-            totalSupply: tokenData.totalSupply,
-            audit: tokenData.audit
-          });
           
           setJupiterData({
             usdPrice: tokenData.usdPrice,
@@ -1699,6 +1486,7 @@ function InsightsColumn({
             topHoldersPercentage: tokenData.audit?.topHoldersPercentage || 0,
             devHoldingPercentage: tokenData.audit?.devBalancePercentage || 0,
             totalSupply: tokenData.totalSupply || 0,
+            createdAt: tokenData.firstPool?.createdAt || tokenData.createdAt || tokenData.created_at || tokenData.creationTime || tokenData.launchTime || null,
             lastUpdate: new Date()
           });
           
@@ -1972,7 +1760,7 @@ function InsightsColumn({
   const [forecastLoading, setForecastLoading] = useState(false);
   const [forecastError, setForecastError] = useState<string | null>(null);
 
-  // Algorithm-based AI Forecast
+  // AI Forecast using Grok service
   const fetchIntelligentAIForecast = useCallback(async (token: any, timeframe: string) => {
     if (!token?.mint) return;
     
@@ -1980,31 +1768,62 @@ function InsightsColumn({
     setForecastError(null);
     
     try {
-      console.log(`🤖 Calculating algorithm-based forecast for ${token.symbol} (${timeframe})`);
+      console.log(`🤖 Fetching AI forecast from Grok for ${token.symbol} (${timeframe})`);
       
-      // Use our algorithm to calculate forecast
-      const forecast = calculateForecast(token);
+      // Get Grok API key from environment variable
+      const grokApiKey = process.env.NEXT_PUBLIC_GROK_API_KEY;
       
+      if (!grokApiKey) {
+        throw new Error('Grok API key not configured');
+      }
       
+      // Calculate metrics first to get the correct age
+      const metrics = getTokenMetrics(token, jupiterData);
+      
+      // Prepare token data with calculated age for AI analysis
+      const tokenDataForAI = {
+        ...token,
+        jupiterCreatedAt: jupiterData?.createdAt,
+        calculatedAge: metrics?.tokenAge // Use the calculated age from insights
+      };
+      
+      // Debug: Log what data is being sent to AI
+      console.log('🤖 AI Forecast Debug:', {
+        tokenSymbol: token.symbol,
+        jupiterCreatedAt: jupiterData?.createdAt,
+        calculatedAge: metrics?.tokenAge,
+        tokenCreatedAt: token.created_at,
+        tokenCreatedAtAlt: token.createdAt
+      });
+      
+      // Use AI service to get forecast
+      const forecast = await aiForecastService.getAIForecast(tokenDataForAI, grokApiKey);
+      
+      console.log('✅ AI forecast received:', forecast);
       setAiForecast(forecast);
       
     } catch (error) {
-      console.error('❌ Algorithm forecast error:', error);
-      setForecastError(error instanceof Error ? error.message : 'Failed to calculate forecast');
+      console.error('❌ AI forecast error:', error);
+      setForecastError(error instanceof Error ? error.message : 'Failed to get AI forecast');
       setAiForecast(null);
     } finally {
       setForecastLoading(false);
     }
   }, []);
 
-  // Fetch AI forecast when token or timeframe changes
+  // Fetch AI forecast only when token or timeframe changes (not on Jupiter data refresh)
   useEffect(() => {
     if (focusToken?.mint && selectedTimeframe) {
-      fetchIntelligentAIForecast(focusToken, selectedTimeframe);
+      // Small delay to ensure metrics are calculated first
+      const timer = setTimeout(() => {
+        fetchIntelligentAIForecast(focusToken, selectedTimeframe);
+      }, 100);
+      
+      return () => clearTimeout(timer);
     }
   }, [focusToken?.mint, selectedTimeframe, fetchIntelligentAIForecast]);
 
-  const getTokenMetrics = (token: any) => {
+  const getTokenMetrics = (token: any, jupiterData?: any) => {
     if (!token) return null;
 
     // Use the correct field names from the transformed data
@@ -2013,21 +1832,8 @@ function InsightsColumn({
     const volume24h = token.volume24h || 0;
     const priceUsd = token.price || 0;
     
-    // Calculate token age from creation date
-    const createdAt = token.created_at || token.blocktime || token.launch_time;
-    const tokenAge = createdAt ? Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24)) : "N/A";
-    
-    // Format token age with units
-    const formatAge = (days: number) => {
-      if (days < 1) return "<1 day";
-      if (days === 1) return "1 day";
-      if (days < 7) return `${days} days`;
-      if (days < 30) return `${Math.floor(days / 7)} weeks`;
-      if (days < 365) return `${Math.floor(days / 30)} months`;
-      return `${Math.floor(days / 365)} years`;
-    };
-    
-    const formattedAge = typeof tokenAge === 'number' ? formatAge(tokenAge) : tokenAge;
+    // Use Jupiter createdAt directly - no calculations
+    const tokenAge = jupiterData?.createdAt || "N/A";
     
     // Calculate confidence based on real metrics
     let confidence = 50; // Base confidence
@@ -2036,10 +1842,8 @@ function InsightsColumn({
     if (marketcap && Number(marketcap) > 1000000) confidence += 20; // $1M+ market cap
     if (liquidity && Number(liquidity) > 100000) confidence += 15; // $100K+ liquidity
     if (volume24h && Number(volume24h) > 50000) confidence += 15; // $50K+ volume
-    if (typeof tokenAge === 'number' && tokenAge > 7) confidence += 10; // 1+ week old
     
     // Reduce confidence for risky indicators
-    if (typeof tokenAge === 'number' && tokenAge < 1) confidence -= 20; // Less than 1 day
     if (token.status === 'fresh') confidence -= 15; // Fresh status
     if (token.is_on_curve) confidence -= 10; // Still on bonding curve
     
@@ -2052,10 +1856,8 @@ function InsightsColumn({
       // Calculate volatility based on real metrics
       let baseVolatility = 1.0;
       
-      // Age-based volatility adjustments
-      if (typeof tokenAge === 'number' && tokenAge < 1) baseVolatility = 3.5; // Very new = very high volatility
-      else if (typeof tokenAge === 'number' && tokenAge < 7) baseVolatility = 2.5; // New = high volatility
-      else if (token.status === 'fresh') baseVolatility = 3.0; // Fresh = high volatility
+      // Status-based volatility adjustments
+      if (token.status === 'fresh') baseVolatility = 3.0; // Fresh = high volatility
       else if (token.is_on_curve) baseVolatility = 1.8; // Curve = medium volatility
       else baseVolatility = 1.0; // Established = low volatility
       
@@ -2084,10 +1886,8 @@ function InsightsColumn({
       // Calculate 1h volatility based on 10m volatility (typically 3-4x higher)
       let baseVolatility = 1.0;
       
-      // Age-based volatility adjustments
-      if (typeof tokenAge === 'number' && tokenAge < 1) baseVolatility = 12.0; // Very new = very high volatility
-      else if (typeof tokenAge === 'number' && tokenAge < 7) baseVolatility = 8.5; // New = high volatility
-      else if (token.status === 'fresh') baseVolatility = 10.0; // Fresh = high volatility
+      // Status-based volatility adjustments
+      if (token.status === 'fresh') baseVolatility = 10.0; // Fresh = high volatility
       else if (token.is_on_curve) baseVolatility = 6.0; // Curve = medium volatility
       else baseVolatility = 4.0; // Established = low volatility
       
@@ -2116,10 +1916,8 @@ function InsightsColumn({
       
       let baseRange = 5.0; // Base expected range
       
-      // Age-based adjustments
-      if (typeof tokenAge === 'number' && tokenAge < 1) baseRange = 20.0; // Very new = high volatility
-      else if (typeof tokenAge === 'number' && tokenAge < 7) baseRange = 12.0; // New = high volatility
-      else if (token.status === 'fresh') baseRange = 15.0; // Fresh = high volatility
+      // Status-based adjustments
+      if (token.status === 'fresh') baseRange = 15.0; // Fresh = high volatility
       else if (token.is_on_curve) baseRange = 8.0; // Curve = medium volatility
       else baseRange = 5.0; // Established = low volatility
       
@@ -2167,12 +1965,7 @@ function InsightsColumn({
       else if (volume24h && Number(volume24h) > 100000) prob += 8; // $100K+ volume
       else if (volume24h && Number(volume24h) < 1000) prob -= 15; // Less than $1K volume
       
-      // Age adjustments
-      if (typeof tokenAge === 'number' && tokenAge > 90) prob += 15; // 3+ months old
-      else if (typeof tokenAge === 'number' && tokenAge > 30) prob += 10; // 1+ month old
-      else if (typeof tokenAge === 'number' && tokenAge > 7) prob += 5; // 1+ week old
-      else if (typeof tokenAge === 'number' && tokenAge < 1) prob -= 25; // Less than 1 day
-      else if (typeof tokenAge === 'number' && tokenAge < 3) prob -= 15; // Less than 3 days
+      // No age adjustments - using raw Jupiter createdAt
       
       // Status adjustments
       if (token.status === 'fresh') prob -= 20; // Fresh status
@@ -2220,10 +2013,8 @@ function InsightsColumn({
     const priceMomentum = getPriceMomentum();
     const volumeMomentum = volume24h ? (Number(volume24h) > 100000 ? "High" : Number(volume24h) > 10000 ? "Medium" : "Low") : "N/A";
     
-    // Calculate acceleration based on age and status
+    // Calculate acceleration based on status only
     const getAcceleration = () => {
-      if (typeof tokenAge === 'number' && tokenAge < 1) return "Rapid";
-      if (typeof tokenAge === 'number' && tokenAge < 7) return "Growing";
       if (token.status === 'fresh') return "New";
       return "Steady";
     };
@@ -2247,7 +2038,7 @@ function InsightsColumn({
       volume24h: volume24h ? `$${formatMarketcap(volume24h)}` : "N/A",
       priceUsd: priceUsd ? `$${formatMarketcap(priceUsd)}` : "N/A",
       holderCount: token.holder_count ?? token.holders ?? "N/A",
-      tokenAge: formattedAge,
+      tokenAge: tokenAge,
       price10mMove,
       price1hMove,
       expectedRange,
@@ -2269,7 +2060,7 @@ function InsightsColumn({
     };
   };
 
-  const metrics = getTokenMetrics(focusToken);
+  const metrics = getTokenMetrics(focusToken, jupiterData);
 
   return (
     <div className={`flex flex-col min-w-0 flex-1 relative z-0 ${className}`}>
@@ -2356,10 +2147,6 @@ function InsightsColumn({
               <div className="grid grid-cols-3 gap-4 mb-4">
                 {/* Left Column - Core Metrics */}
                 <div className="space-y-3">
-                  <div>
-                    <div className="text-white/60 text-sm font-mono mb-2">Confidence</div>
-                    <ConfidenceBar value={metrics?.confidence || 0} />
-                  </div>
                   <div>
                     <div className="text-white/60 text-sm font-mono mb-2">Marketcap</div>
                     <div className="text-white text-base font-mono flex items-center space-x-2">
@@ -2527,7 +2314,10 @@ function InsightsColumn({
                     <div className="text-white/60 text-sm font-mono mb-2">Age</div>
                     <div className="text-white text-base font-mono font-semibold">
                       {(() => {
-                        const createdDate = new Date(focusToken.created_at || focusToken.createdAt || new Date());
+                        const createdAt = jupiterData?.createdAt || focusToken.created_at || focusToken.createdAt;
+                        if (!createdAt) return "N/A";
+                        
+                        const createdDate = new Date(createdAt);
                         const now = new Date();
                         const diffInSeconds = Math.floor((now.getTime() - createdDate.getTime()) / 1000);
                         
@@ -2567,30 +2357,6 @@ function InsightsColumn({
               )}
               
               <div className="space-y-4">
-                {/* Recommendation */}
-                <div>
-                  <div className="text-white/60 text-sm font-mono mb-2">Recommendation</div>
-                  <div className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-mono font-semibold border ${
-                    aiForecast?.recommendation === 'STRONG_BUY' 
-                      ? 'bg-green-500/20 text-green-300 border-green-500/40' 
-                      : aiForecast?.recommendation === 'BUY'
-                        ? 'bg-green-500/15 text-green-300 border-green-500/30'
-                        : aiForecast?.recommendation === 'HOLD'
-                          ? 'bg-yellow-500/15 text-yellow-300 border-yellow-500/30'
-                          : aiForecast?.recommendation === 'SELL'
-                            ? 'bg-red-500/15 text-red-300 border-red-500/30'
-                            : 'bg-red-500/20 text-red-300 border-red-500/40'
-                  }`}>
-                    {forecastLoading ? (
-                      <div className="animate-spin rounded-full h-3 w-3 border-b border-white/60"></div>
-                    ) : (
-                      <>
-                        <span>{aiForecast?.recommendation?.replace('_', ' ') || "N/A"}</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-
                 {/* Score and Confidence */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -2646,27 +2412,7 @@ function InsightsColumn({
                 )}
               </div>
               
-              {/* AI Reasoning Display */}
-              {aiForecast?.reasoning && !forecastLoading && (
-                <div className="mt-3 p-2 bg-blue-500/10 border border-blue-500/20 rounded text-blue-300 text-xs">
-                  <div className="font-semibold mb-1">AI Analysis:</div>
-                  <div>{aiForecast.reasoning}</div>
-                </div>
-              )}
               
-              {/* Dynamic Calculation Info */}
-              {!aiForecast && !forecastLoading && metrics && (
-                <div className="mt-3 p-2 bg-green-500/10 border border-green-500/20 rounded text-green-300 text-xs">
-                  <div className="font-semibold mb-1">Dynamic Analysis:</div>
-                  <div>
-                    Calculated volatility based on real-time data: 
-                    {metrics.liquidity && ` liquidity: ${metrics.liquidity},`}
-                    {metrics.tokenAge && ` age: ${metrics.tokenAge},`}
-                    {metrics.marketcap && ` market cap: ${metrics.marketcap}`}
-                    {metrics.status && `, status: ${metrics.status}`}
-                  </div>
-                </div>
-              )}
             </InsightCard>
 
             {/* Momentum Section */}
@@ -2766,6 +2512,8 @@ export const Scope = ({
   // Handle companion attachment - only one companion can be attached at a time
   const handleCompanionAttached = (companionName: string, token: any) => {
     setAttachedCompanion({name: companionName, tokenMint: token.mint});
+    // Open insights section when companion is dropped on token
+    setFocusToken(token);
   };
   
   // Handle companion detach
@@ -2780,7 +2528,7 @@ export const Scope = ({
   // Token filtering state (removed - no longer using search filtering)
   
   // Chat state
-  const [messages, setMessages] = useState<Array<{ type: 'user' | 'assistant'; content: string; timestamp: Date }>>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   
   // Help popup state
@@ -2790,24 +2538,9 @@ export const Scope = ({
   
   // Settings state
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [settingsView, setSettingsView] = useState<'menu' | 'api' | 'history'>('menu');
-  const [selectedAPI, setSelectedAPI] = useState('server-grok');
-  const [apiKeys, setApiKeys] = useState({
-    grok4: '',
-    gpt4: '',
-    claude: '',
-    gemini: ''
-  });
-  const [showApiKeyPopup, setShowApiKeyPopup] = useState(false);
-  const [editingApiKey, setEditingApiKey] = useState('');
+  const [settingsView, setSettingsView] = useState<'menu' | 'history'>('menu');
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
-  const [conversationHistory, setConversationHistory] = useState<Array<{
-    id: string;
-    title: string;
-    messages: Array<{ type: 'user' | 'assistant'; content: string; timestamp: Date }>;
-    timestamp: Date;
-    summary?: string;
-  }>>([]);
+  const [conversationHistory, setConversationHistory] = useState<Conversation[]>([]);
 
   // AI Agents state
   const [hoveredAgent, setHoveredAgent] = useState<any>(null);
@@ -3017,61 +2750,17 @@ export const Scope = ({
 
   // Load conversations from localStorage on component mount
   useEffect(() => {
-    const savedConversations = localStorage.getItem('scope_conversations');
-    if (savedConversations) {
-      try {
-        const parsed = JSON.parse(savedConversations);
-        // Convert timestamp strings back to Date objects
-        const conversationsWithDates = parsed.map((conv: any) => ({
-          ...conv,
-          timestamp: new Date(conv.timestamp),
-          messages: conv.messages.map((msg: any) => ({
-            ...msg,
-            timestamp: new Date(msg.timestamp)
-          }))
-        }));
-        setConversationHistory(conversationsWithDates);
-      } catch (error) {
-        console.error('Failed to load conversations from localStorage:', error);
+    try {
+      const saved = localStorage.getItem('scope_conversations');
+      if (saved) {
+        const conversations = JSON.parse(saved);
+        setConversationHistory(Array.isArray(conversations) ? conversations : []);
       }
+    } catch (error) {
+      console.error('Failed to load conversations:', error);
     }
   }, []);
 
-  // Load API keys and selected API from localStorage
-  useEffect(() => {
-    try {
-      const savedApiKeys = localStorage.getItem('companion_api_keys');
-      const savedSelectedAPI = localStorage.getItem('selected_api');
-      
-      if (savedApiKeys) {
-        const parsedKeys = JSON.parse(savedApiKeys);
-        // Migrate old API key structure to new structure
-        const migratedKeys = {
-          grok4: parsedKeys.grok4 || '',
-          gpt4: parsedKeys.gpt4 || parsedKeys.chatgpt || '',
-          claude: parsedKeys.claude || '',
-          gemini: parsedKeys.gemini || parsedKeys.perplexity || ''
-        };
-        setApiKeys(migratedKeys);
-        
-        // Save migrated keys back to localStorage
-        localStorage.setItem('companion_api_keys', JSON.stringify(migratedKeys));
-      }
-      
-      if (savedSelectedAPI) {
-        // Migrate old API names to new names
-        const migratedAPI = savedSelectedAPI === 'chatgpt' ? 'gpt4' : 
-                           savedSelectedAPI === 'perplexity' ? 'gemini' : 
-                           savedSelectedAPI;
-        setSelectedAPI(migratedAPI);
-        
-        // Save migrated API back to localStorage
-        localStorage.setItem('selected_api', migratedAPI);
-      }
-    } catch (error) {
-      console.error('Failed to load API configuration from localStorage:', error);
-    }
-  }, []);
 
   // Save conversations to localStorage whenever they change
   useEffect(() => {
@@ -3274,29 +2963,13 @@ export const Scope = ({
   }, [tokens, assetType, stockData]);
 
   // Generate smart conversation title based on content
-  const generateConversationTitle = useCallback((messages: Array<{ type: 'user' | 'assistant'; content: string; timestamp: Date }>) => {
+  const generateConversationTitle = useCallback((messages: ChatMessage[]) => {
     if (messages.length === 0) return 'New Conversation';
     
-    // Find the first user message to use as title
-    const firstUserMessage = messages.find(msg => msg.type === 'user');
+    const firstUserMessage = messages.find(msg => msg.role === 'user');
     if (firstUserMessage) {
       const content = firstUserMessage.content;
-      // Create a smart title based on content
-      if (content.length <= 40) {
-        return content;
-      } else {
-        // Try to find a good break point
-        const words = content.split(' ');
-        let title = '';
-        for (const word of words) {
-          if ((title + ' ' + word).length <= 40) {
-            title += (title ? ' ' : '') + word;
-          } else {
-            break;
-          }
-        }
-        return title + (title.length < content.length ? '...' : '');
-      }
+      return content.length <= 40 ? content : content.slice(0, 40) + '...';
     }
     
     return 'New Conversation';
@@ -3320,19 +2993,29 @@ export const Scope = ({
     // console.log('🤖 Active companion:', attachedCompanion);
     // console.log('📝 Current messages:', messages.length);
     
-    const userMessage = { type: 'user' as const, content: inputMessage, timestamp: new Date() };
+    const userMessage: ChatMessage = { 
+      role: 'user', 
+      content: inputMessage, 
+      timestamp: Date.now() 
+    };
     setMessages(prev => [...prev, userMessage]);
     setInputMessage('');
     
     // Save conversation to history if it's a new conversation
     if (messages.length === 0) {
-      const newConversation = {
+      const newConversation: Conversation = {
         id: Date.now().toString(),
         title: generateConversationTitle([userMessage]),
         messages: [userMessage],
-        timestamp: new Date()
+        timestamp: Date.now(),
+        companionName: attachedCompanion?.name,
+        tokenMint: attachedCompanion?.tokenMint
       };
-      setConversationHistory(prev => [newConversation, ...prev.slice(0, 19)]); // Keep last 20 conversations
+      setConversationHistory(prev => {
+        const updated = [newConversation, ...prev.slice(0, 19)];
+        localStorage.setItem('scope_conversations', JSON.stringify(updated));
+        return updated;
+      }); // Keep last 20 conversations
       setCurrentConversationId(newConversation.id);
     } else {
       // Update existing conversation with user message
@@ -3343,6 +3026,8 @@ export const Scope = ({
           
           if (currentConvIndex !== -1) {
             updated[currentConvIndex].messages = [...updated[currentConvIndex].messages, userMessage];
+            // Save to localStorage
+            localStorage.setItem('scope_conversations', JSON.stringify(updated));
           }
           return updated;
         });
@@ -3356,120 +3041,96 @@ export const Scope = ({
     
     // Prepare conversation history for API
     const conversationHistory: ChatMessage[] = messages.map(msg => ({
-      role: msg.type === 'user' ? 'user' : 'assistant',
-      content: msg.content
+      role: msg.role,
+      content: msg.content,
+      timestamp: msg.timestamp
     }));
     
     // Call the chat service
     try {
-      // console.log('📞 Calling chat service...');
       let response: string;
       
-      // If there's an active companion attached to a token, use token analysis
-      if (attachedCompanion && attachedCompanion.tokenMint) {
-        // console.log('Using token analysis for:', attachedCompanion.name, 'on token:', attachedCompanion.tokenMint);
-        const token = tokens.find(t => t.mint === attachedCompanion.tokenMint);
-        if (token) {
-          if (selectedAPI === 'server-grok') {
-            // Use server-side Grok API for mystical companion responses
-            const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL || 
-              (process.env.NODE_ENV === 'production' 
-                ? 'http://localhost:8080'
-                : 'http://localhost:8080');
-            // Add timeout to frontend request
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-            
-            const serverResponse = await fetch(`${serverUrl}/api/grok/chat/${token.mint}`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                companionName: attachedCompanion.name,
-                userMessage: inputMessage,
-                tokenData: token
-              }),
-              signal: controller.signal
-            });
-            
-            clearTimeout(timeoutId);
-            
-            if (!serverResponse.ok) {
-              throw new Error(`Server responded with ${serverResponse.status}: ${serverResponse.statusText}`);
-            }
-            
-            const serverData = await serverResponse.json();
-            response = serverData.companionResponse || 'No response available';
-          } else {
-            response = await chatService.analyzeToken(token, attachedCompanion.name, inputMessage, selectedAPI, apiKeys);
-          }
-        } else {
-          if (selectedAPI === 'server-grok') {
-            // Use server-side Grok API for general chat
-            const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL || 
-              (process.env.NODE_ENV === 'production' 
-                ? 'http://localhost:8080'
-                : 'http://localhost:8080');
-            // Add timeout to frontend request
-            const controller2 = new AbortController();
-            const timeoutId2 = setTimeout(() => controller2.abort(), 15000);
-            
-            const serverResponse = await fetch(`${serverUrl}/api/grok/chat/${attachedCompanion.tokenMint}`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                companionName: attachedCompanion.name,
-                conversationHistory: conversationHistory,
-                userMessage: inputMessage
-              }),
-              signal: controller2.signal
-            });
-            
-            clearTimeout(timeoutId2);
-            
-            if (!serverResponse.ok) {
-              throw new Error(`Server responded with ${serverResponse.status}: ${serverResponse.statusText}`);
-            }
-            
-            const serverData = await serverResponse.json();
-            response = serverData.companionResponse || 'No response available';
-          } else {
-            response = await chatService.getCompanionResponse(attachedCompanion.name, conversationHistory, inputMessage, selectedAPI, apiKeys);
-          }
+      // Get Grok API key from environment variable
+      const grokApiKey = process.env.NEXT_PUBLIC_GROK_API_KEY;
+      
+      if (grokApiKey) {
+        // Get comprehensive token data for AI context
+        let tokenData = attachedCompanion && attachedCompanion.tokenMint 
+          ? tokens.find(t => t.mint === attachedCompanion.tokenMint) || focusToken
+          : focusToken;
+        
+        // If we have focusToken, merge it with any additional data
+        if (focusToken && tokenData) {
+          tokenData = {
+            ...tokenData,
+            ...focusToken,
+            // Ensure we have all the stats data
+            stats5m: focusToken.stats5m || tokenData.stats5m,
+            stats1h: focusToken.stats1h || tokenData.stats1h,
+            stats6h: focusToken.stats6h || tokenData.stats6h,
+            stats24h: focusToken.stats24h || tokenData.stats24h,
+            // Ensure we have audit data
+            audit: focusToken.audit || tokenData.audit,
+            // Ensure we have market data
+            marketCap: focusToken.marketCap || tokenData.marketCap,
+            usdPrice: focusToken.usdPrice || tokenData.usdPrice,
+            liquidity: focusToken.liquidity || tokenData.liquidity,
+            holderCount: focusToken.holderCount || tokenData.holderCount,
+            // Ensure we have timestamps
+            createdAt: focusToken.createdAt || focusToken.created_at || tokenData.createdAt || tokenData.created_at,
+            created_at: focusToken.created_at || focusToken.createdAt || tokenData.created_at || tokenData.createdAt
+          };
         }
+        
+        // Debug: Log the token data being sent to AI
+        console.log('🤖 AI Token Data Debug:', {
+          symbol: tokenData?.symbol,
+          name: tokenData?.name,
+          marketCap: tokenData?.marketCap,
+          usdPrice: tokenData?.usdPrice,
+          liquidity: tokenData?.liquidity,
+          holderCount: tokenData?.holderCount,
+          audit: tokenData?.audit,
+          devHoldingPercentage: tokenData?.audit?.devBalancePercentage,
+          topHoldersPercentage: tokenData?.audit?.topHoldersPercentage,
+          stats5m: tokenData?.stats5m,
+          stats1h: tokenData?.stats1h,
+          stats6h: tokenData?.stats6h,
+          stats24h: tokenData?.stats24h,
+          createdAt: tokenData?.createdAt || tokenData?.created_at
+        });
+        
+        // Use simple Grok service with environment variable
+        response = await simpleGrokService.sendMessage(
+          inputMessage,
+          currentCompanion,
+          conversationHistory,
+          grokApiKey,
+          tokenData
+        );
+          } else {
+        // Fallback to server chat service
+        if (attachedCompanion && attachedCompanion.tokenMint) {
+          const token = tokens.find(t => t.mint === attachedCompanion.tokenMint);
+          if (token) {
+            response = await serverChatService.analyzeToken(
+              token,
+              attachedCompanion.name,
+              inputMessage
+            );
       } else {
-        console.log('Using general companion response for:', currentCompanion);
-        if (selectedAPI === 'server-grok') {
-          // Use server-side Grok API for general chat
-          const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL || 
-            (process.env.NODE_ENV === 'production' 
-              ? 'http://localhost:8080'
-              : 'http://localhost:8080');
-          // Add timeout to frontend request
-          const controller3 = new AbortController();
-          const timeoutId3 = setTimeout(() => controller3.abort(), 15000);
-          
-          const serverResponse = await fetch(`${serverUrl}/api/grok/chat`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              companionName: currentCompanion,
-              conversationHistory: conversationHistory,
-              userMessage: inputMessage
-            }),
-            signal: controller3.signal
-          });
-          
-          clearTimeout(timeoutId3);
-          
-          if (!serverResponse.ok) {
-            throw new Error(`Server responded with ${serverResponse.status}: ${serverResponse.statusText}`);
+            response = await serverChatService.generalChat(
+              attachedCompanion.name,
+              conversationHistory,
+              inputMessage
+            );
           }
-          
-          const serverData = await serverResponse.json();
-          response = serverData.companionResponse || 'No response available';
         } else {
-          // Use general companion response
-          response = await chatService.getCompanionResponse(currentCompanion, conversationHistory, inputMessage, selectedAPI, apiKeys);
+          response = await serverChatService.generalChat(
+            currentCompanion,
+            conversationHistory,
+            inputMessage
+          );
         }
       }
       
@@ -3477,10 +3138,10 @@ export const Scope = ({
       setIsTyping(false);
       setTypingCompanion(null);
       
-      const assistantMessage = { 
-        type: 'assistant' as const, 
+      const assistantMessage: ChatMessage = { 
+        role: 'assistant', 
         content: response, 
-        timestamp: new Date() 
+        timestamp: Date.now() 
       };
       setMessages(prev => [...prev, assistantMessage]);
       
@@ -3492,6 +3153,8 @@ export const Scope = ({
           
           if (currentConvIndex !== -1) {
             updated[currentConvIndex].messages = [...updated[currentConvIndex].messages, assistantMessage];
+            // Save to localStorage
+            localStorage.setItem('scope_conversations', JSON.stringify(updated));
           }
           return updated;
         });
@@ -3504,10 +3167,10 @@ export const Scope = ({
       // Fallback response if API fails
       const fallbackResponse = `${currentCompanion}: I apologize, but I'm having trouble connecting to my analysis systems right now. Please try again in a moment.`;
       
-      const assistantMessage = { 
-        type: 'assistant' as const, 
+      const assistantMessage: ChatMessage = { 
+        role: 'assistant', 
         content: fallbackResponse, 
-        timestamp: new Date() 
+        timestamp: Date.now() 
       };
       setMessages(prev => [...prev, assistantMessage]);
       
@@ -3519,6 +3182,8 @@ export const Scope = ({
           
           if (currentConvIndex !== -1) {
             updated[currentConvIndex].messages = [...updated[currentConvIndex].messages, assistantMessage];
+            // Save to localStorage
+            localStorage.setItem('scope_conversations', JSON.stringify(updated));
           }
           return updated;
         });
@@ -3983,14 +3648,18 @@ export const Scope = ({
                     setInputMessage('');
                     
                     // Create new conversation for token analysis
-                    const newConversation = {
+                    const newConversation: Conversation = {
                       id: Date.now().toString(),
                       title: `${companionName} analyzing ${token.name || token.symbol || 'token'}`,
                       messages: [],
-                      timestamp: new Date()
+                      timestamp: Date.now(),
+                      companionName: companionName,
+                      tokenMint: token.mint
                     };
                     setConversationHistory(prev => [newConversation, ...prev.slice(0, 19)]);
                     setCurrentConversationId(newConversation.id);
+                    // Save to localStorage
+      localStorage.setItem('scope_conversations', JSON.stringify([newConversation, ...conversationHistory.slice(0, 19)]));
                     
                     // Simulate companion analyzing the token
                     setTimeout(() => {
@@ -4005,10 +3674,10 @@ export const Scope = ({
                         setTypingCompanion(null);
                         
                         // Add analysis message
-                        const analysisMessage = {
-                          type: 'assistant' as const,
+                        const analysisMessage: ChatMessage = {
+                          role: 'assistant',
                           content: `${companionName}: Analyzed ${token.name || token.symbol || 'this token'}. MC: ${token.marketCap ? `$${token.marketCap.toLocaleString()}` : 'N/A'}, Price: ${token.price && typeof token.price === 'number' ? `$${token.price.toFixed(8)}` : 'N/A'}. ${token.is_on_curve ? 'On bonding curve - interesting dynamics!' : 'Standard market behavior.'}`,
-                          timestamp: new Date()
+                          timestamp: Date.now()
                         };
                         setMessages([analysisMessage]);
                         
@@ -4019,6 +3688,8 @@ export const Scope = ({
                           
                           if (currentConvIndex !== -1) {
                             updated[currentConvIndex].messages = [analysisMessage];
+                            // Save to localStorage
+            localStorage.setItem('scope_conversations', JSON.stringify(updated));
                           }
                           return updated;
                         });
@@ -4375,20 +4046,20 @@ export const Scope = ({
                               initial={{ opacity: 0, y: 10, scale: 0.95 }}
                               animate={{ opacity: 1, y: 0, scale: 1 }}
                               transition={{ duration: 0.2, ease: "easeOut" }}
-                              className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                             >
                               <div
                                 className={`max-w-[75%] rounded-2xl px-4 py-3 break-words shadow-sm ${
-                                  message.type === 'user'
+                                  message.role === 'user'
                                     ? 'bg-blue-600 text-white rounded-br-md'
                                     : 'bg-gray-700 text-gray-100 rounded-bl-md'
                                 }`}
                               >
                                 <div className="text-sm leading-relaxed break-words">{message.content}</div>
                                 <div className={`text-xs mt-2 ${
-                                  message.type === 'user' ? 'text-blue-200 text-right' : 'text-gray-400 text-left'
+                                  message.role === 'user' ? 'text-blue-200 text-right' : 'text-gray-400 text-left'
                                 }`}>
-                                  {message.timestamp.toLocaleTimeString()}
+                                  {new Date(message.timestamp).toLocaleTimeString()}
                                 </div>
                               </div>
                             </motion.div>
@@ -4524,16 +4195,6 @@ export const Scope = ({
                                 <div className="text-gray-400 text-sm mt-1">Start a fresh conversation</div>
                               </button>
                               
-                              <button
-                                onClick={() => {
-                                  console.log('Companion API button clicked');
-                                  setSettingsView('api');
-                                }}
-                                className="w-full p-4 bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 transition-all duration-200 text-left rounded-lg"
-                              >
-                                <div className="text-white text-lg font-medium">Companion API</div>
-                                <div className="text-gray-400 text-sm mt-1">Configure AI providers and API keys</div>
-                              </button>
                               
                               <button
                                 onClick={() => {
@@ -4544,117 +4205,6 @@ export const Scope = ({
                               >
                                 <div className="text-white text-lg font-medium">History</div>
                                 <div className="text-gray-400 text-sm mt-1">View and restore past conversations</div>
-                              </button>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Companion API View */}
-                        {settingsView === 'api' && (
-                          <div>
-                            <div className="flex justify-between items-center mb-4 pb-3 border-b border-white/10">
-                              <div className="flex items-center space-x-3">
-                                <button
-                                  onClick={() => setSettingsView('menu')}
-                                  className="text-gray-400 hover:text-white transition-colors p-1 rounded-full hover:bg-white/10"
-                                >
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                                  </svg>
-                                </button>
-                                <h3 className="text-white text-lg font-semibold">Companion API</h3>
-                              </div>
-                              <button
-                                onClick={() => setIsSettingsOpen(false)}
-                                className="text-gray-400 hover:text-white transition-colors p-1 rounded-full hover:bg-white/10"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                              </button>
-                            </div>
-                            
-                            <div className="space-y-4">
-                              <div>
-                                <label className="block text-white text-sm font-medium mb-2">AI Provider</label>
-                                <select
-                                  value={selectedAPI}
-                                  onChange={(e) => setSelectedAPI(e.target.value)}
-                                  className="w-full p-3 bg-white/5 border border-white/10 rounded-lg text-white focus:border-white/20 focus:outline-none"
-                                >
-                                  <option value="server-grok">Grok-4 (ILLUSIO Server) - No API Key Required</option>
-                                  <option value="gpt4">GPT-4 (OpenAI) - Requires API Key</option>
-                                  <option value="claude">Claude (Anthropic) - Requires API Key</option>
-                                  <option value="gemini">Gemini (Google) - Requires API Key</option>
-                                </select>
-                              </div>
-
-                              {selectedAPI !== 'server-grok' && (
-                                <div>
-                                  <label className="block text-white text-sm font-medium mb-2">API Key</label>
-                                  <div className="flex space-x-2">
-                                    <input
-                                      type="password"
-                                      value={apiKeys[selectedAPI as keyof typeof apiKeys] || ''}
-                                      onChange={(e) => setApiKeys(prev => ({ ...prev, [selectedAPI]: e.target.value }))}
-                                      placeholder={`Enter your ${selectedAPI.toUpperCase()} API key`}
-                                      className="flex-1 p-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:border-white/20 focus:outline-none"
-                                    />
-                                    <button
-                                      onClick={() => {
-                                        const key = apiKeys[selectedAPI as keyof typeof apiKeys];
-                                        if (key) {
-                                          navigator.clipboard.writeText(key);
-                                          // You could add a toast notification here
-                                        }
-                                      }}
-                                      className="px-3 py-3 bg-white/10 border border-white/10 rounded-lg text-white hover:bg-white/20 transition-colors"
-                                    >
-                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                      </svg>
-                                    </button>
-                                  </div>
-                                </div>
-                              )}
-
-                              {selectedAPI === 'server-grok' && (
-                                <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
-                                  <div className="flex items-center space-x-2">
-                                    <span className="text-green-400">✅</span>
-                                    <span className="text-green-400 text-sm font-medium">Using ILLUSIO Server</span>
-                                  </div>
-                                  <p className="text-gray-400 text-sm mt-1">
-                                    No API key required. Using our secure server-side Grok API.
-                                  </p>
-                                </div>
-                              )}
-
-                              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
-                                <div className="flex items-start space-x-3">
-                                  <svg className="w-5 h-5 text-blue-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                  </svg>
-                                  <div>
-                                    <h4 className="text-blue-400 font-medium mb-1">API Key Security</h4>
-                                    <p className="text-gray-300 text-sm">
-                                      Your API keys are stored locally in your browser and never sent to our servers. 
-                                      Make sure to keep your keys secure and never share them publicly.
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <button
-                                onClick={() => {
-                                  // Save API keys to localStorage
-                                  localStorage.setItem('companion_api_keys', JSON.stringify(apiKeys));
-                                  localStorage.setItem('selected_api', selectedAPI);
-                                  setIsSettingsOpen(false);
-                                }}
-                                className="w-full p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
-                              >
-                                Save Configuration
                               </button>
                             </div>
                           </div>
@@ -4712,16 +4262,17 @@ export const Scope = ({
                                           {conversation.messages.length} messages
                                         </p>
                                         <p className="text-gray-500 text-xs mt-1">
-                                          {conversation.timestamp.toLocaleDateString()} at {conversation.timestamp.toLocaleTimeString()}
+                                          {new Date(conversation.timestamp).toLocaleDateString()} at {new Date(conversation.timestamp).toLocaleTimeString()}
+                                          {conversation.companionName && ` • ${conversation.companionName}`}
                                         </p>
                                       </div>
                                       <button
                                         onClick={(e) => {
                                           e.stopPropagation();
+                                          // Delete from localStorage
+                                          const updated = conversationHistory.filter(conv => conv.id !== conversation.id);
+                                          localStorage.setItem('scope_conversations', JSON.stringify(updated));
                                           setConversationHistory(prev => prev.filter(conv => conv.id !== conversation.id));
-                                          localStorage.setItem('scope_conversations', JSON.stringify(
-                                            conversationHistory.filter(conv => conv.id !== conversation.id)
-                                          ));
                                         }}
                                         className="text-gray-500 hover:text-red-400 transition-colors p-1 rounded-full hover:bg-red-500/10"
                                       >
@@ -4739,8 +4290,9 @@ export const Scope = ({
                               <div className="mt-4 pt-4 border-t border-white/10">
                                 <button
                                   onClick={() => {
-                                    setConversationHistory([]);
+                                    // Clear from localStorage
                                     localStorage.removeItem('scope_conversations');
+                                    setConversationHistory([]);
                                   }}
                                   className="w-full p-3 bg-red-600/20 border border-red-600/30 text-red-400 rounded-lg font-medium hover:bg-red-600/30 transition-colors"
                                 >

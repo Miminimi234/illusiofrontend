@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 
 interface BottomNavigationProps {
   isNavigationHubOpen?: boolean;
@@ -8,6 +9,7 @@ interface BottomNavigationProps {
 }
 
 export default function BottomNavigation({ isNavigationHubOpen = false, isOracleHubOpen = false, isScopeOpen = false }: BottomNavigationProps) {
+  const router = useRouter();
   const [visibleButtons, setVisibleButtons] = useState<number[]>([]);
   const [position, setPosition] = useState({ x: 0, y: 0 }); // 0 = center, 1 = right
   const animationRef = useRef<number | undefined>(undefined);

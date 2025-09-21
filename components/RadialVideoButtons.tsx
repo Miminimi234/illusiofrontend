@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
 interface RadialVideoButtonsProps {
   isNavigationHubOpen: boolean;
@@ -13,6 +14,7 @@ interface RadialVideoButtonsProps {
 }
 
 export default function RadialVideoButtons({ isNavigationHubOpen, setIsNavigationHubOpen, isScopeOpen, setIsScopeOpen, isOracleHubOpen, setIsOracleHubOpen, isManifestoOpen, setIsManifestoOpen }: RadialVideoButtonsProps) {
+  const router = useRouter();
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const [isHovering, setIsHovering] = useState(false);
   const [hoveredButton, setHoveredButton] = useState<string | null>(null);
@@ -42,16 +44,16 @@ export default function RadialVideoButtons({ isNavigationHubOpen, setIsNavigatio
   };
 
   const BUTTONS = [
-    { pos: "navigation", color: "#FF6B6B", alt: "Navigation", onClick: () => setIsNavigationHubOpen(true), video: "/1.webm", type: "webm" },
-    { pos: "oracle", color: "#96CEB4", alt: "Oracle", onClick: () => setIsOracleHubOpen(true), video: "/4.webm", type: "webm" },
+    { pos: "navigation", color: "#FF6B6B", alt: "Navigation", onClick: () => router.push('/navigation'), video: "/1.webm", type: "webm" },
+    { pos: "oracle", color: "#96CEB4", alt: "Oracle", onClick: () => router.push('/oracle'), video: "/4.webm", type: "webm" },
     { pos: "scope", color: "#45B7D1", alt: "Scope", onClick: () => {
       try {
-        setIsScopeOpen(true);
+        router.push('/scope');
       } catch (error) {
         console.error("Error in scope button click handler:", error);
       }
     }, video: "/3.webm", type: "webm" },
-    { pos: "manifesto", color: "#4ECDC4", alt: "Manifesto", onClick: () => setIsManifestoOpen(true), video: "/2.webm", type: "webm" },
+    { pos: "manifesto", color: "#4ECDC4", alt: "Manifesto", onClick: () => router.push('/manifesto'), video: "/2.webm", type: "webm" },
   ];
 
   // Check if buttons have appeared before on component mount

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardRef } from 'react';
+import { useBirdeyeTrades } from '@/hooks/useBirdeyeTrades';
 
 interface Transaction {
   signature: string;
@@ -97,6 +98,15 @@ interface SearchToken {
   updatedAt: string;
 }
 
+interface JupiterData {
+  marketCap: number;
+  price: number;
+  volume24h: number;
+  liquidity: number;
+  priceChange24h: number;
+  priceChangePercent24h: number;
+}
+
 interface PureVisualRetrocausalityProps {
   onNodeHover?: (nodeId: string | null) => void;
   predictionData?: {
@@ -143,6 +153,97 @@ const PureVisualRetrocausality = forwardRef<PureVisualRetrocausalityRef, PureVis
   const panRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const isDraggingRef = useRef<boolean>(false);
   const lastMousePosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  // Jupiter data and Birdeye trades for animation
+  const [jupiterData, setJupiterData] = useState<JupiterData | null>(null);
+  const [jupiterLoading, setJupiterLoading] = useState(false);
+  const { trades } = useBirdeyeTrades({
+    tokenAddress: selectedToken?.id,
+    enabled: !!selectedToken?.id,
+    maxTrades: 5,
+    interval: 3000
+  });
+
+  // Fetch Jupiter data for selected token
+  const fetchJupiterData = useCallback(async (tokenAddress: string) => {
+    if (!tokenAddress) return;
+    
+    setJupiterLoading(true);
+    try {
+      const response = await fetch(`https://lite-api.jup.ag/tokens/v2/search?query=${tokenAddress}`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const tokenData = data[0];
+        
+        if (tokenData) {
+          const marketCap = tokenData.mcap || (tokenData.usdPrice * (tokenData.totalSupply || 1000000000));
+          
+          setJupiterData({
+            marketCap,
+            price: tokenData.usdPrice || 0,
+            volume24h: tokenData.volume24h || 0,
+            liquidity: tokenData.liquidity || 0,
+            priceChange24h: tokenData.priceChange24h || 0,
+            priceChangePercent24h: tokenData.priceChangePercent24h || 0
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching Jupiter data:', error);
+    } finally {
+      setJupiterLoading(false);
+    }
+  }, []);
+
+  // Fetch Jupiter data when token is selected
+  useEffect(() => {
+    if (selectedToken?.id) {
+      fetchJupiterData(selectedToken.id);
+      // Clear processed trades when switching tokens
+      processedTradesRef.current.clear();
+    } else {
+      setJupiterData(null);
+      // Clear everything when no token selected
+      processedTradesRef.current.clear();
+      photonPairsRef.current = [];
+    }
+  }, [selectedToken?.id, fetchJupiterData]);
+
+  // Update prediction data based on Jupiter data
+  useEffect(() => {
+    if (jupiterData && selectedToken) {
+      // Calculate prediction confidence based on market cap and volume
+      const marketCapConfidence = Math.min(0.95, Math.max(0.3, Math.log10(jupiterData.marketCap) / 10));
+      const volumeConfidence = Math.min(0.8, Math.max(0.2, Math.log10(jupiterData.volume24h + 1) / 8));
+      const confidence = (marketCapConfidence + volumeConfidence) / 2;
+      
+      // Calculate expected range based on price volatility
+      const volatility = Math.abs(jupiterData.priceChangePercent24h) / 100;
+      const expectedRange = {
+        min: jupiterData.price * (1 - volatility * 0.5),
+        max: jupiterData.price * (1 + volatility * 0.5)
+      };
+      
+      // Calculate probabilities based on price change
+      const upProbability = jupiterData.priceChangePercent24h >= 0 ? 
+        Math.min(0.9, 0.5 + (jupiterData.priceChangePercent24h / 100) * 2) : 
+        Math.max(0.1, 0.5 + (jupiterData.priceChangePercent24h / 100) * 2);
+      const downProbability = 1 - upProbability;
+      
+      // Update prediction data (this would need to be passed up to parent component)
+      // For now, we'll store it locally for visualization
+      console.log('Updated prediction data:', {
+        confidence,
+        expectedRange,
+        upProbability,
+        downProbability
+      });
+    }
+  }, [jupiterData, selectedToken]);
 
   // Precision scientific instrument layout - centered with zoom/pan
   const getCenteredNodes = useCallback((canvasWidth: number, canvasHeight: number) => {
@@ -192,14 +293,43 @@ const PureVisualRetrocausality = forwardRef<PureVisualRetrocausalityRef, PureVis
     const bboPos = nodes.BBO;
     const d0Pos = nodes.D0;
     
-    // Weighted random selection for idler path
-    const isErased = Math.random() < 0.6; // 60% erased, 40% which-path
+    // Use transaction data to determine path and properties
+    let isErased: boolean;
+    let size: number;
+    let speed: number;
+    let slippage: number;
+    
+    if (transaction.type === 'MARKET_CAP') {
+      // Jupiter market cap data - use market cap size for photon properties
+      const marketCapSize = Math.log10(transaction.amount || 1);
+      isErased = marketCapSize > 8; // Large market caps more likely to be erased
+      size = Math.max(3, Math.min(10, marketCapSize / 2));
+      speed = Math.max(0.8, Math.min(2.5, 1.5 + (marketCapSize - 6) / 4));
+      slippage = Math.min(0.5, (transaction.amount || 0) / 1000000000); // Higher market cap = less slippage
+    } else if (transaction.type === 'TRADE') {
+      // Birdeye trade data - use trade volume and side for properties
+      const tradeVolume = Math.log10(transaction.amount || 1);
+      isErased = transaction.side === 'SELL'; // Sell trades more likely to be erased
+      size = Math.max(2, Math.min(8, tradeVolume / 3));
+      speed = Math.max(0.5, Math.min(2, 1 + tradeVolume / 5));
+      slippage = Math.random() * 0.4; // Trade slippage varies more
+    } else if (transaction.type === 'HIGH_VOLUME_TRADE') {
+      // High volume trades - create more dramatic effects
+      const tradeVolume = Math.log10(transaction.amount || 1);
+      isErased = Math.random() < 0.3; // High volume trades less likely to be erased
+      size = Math.max(4, Math.min(12, tradeVolume / 2));
+      speed = Math.max(1, Math.min(3, 1.5 + tradeVolume / 3));
+      slippage = Math.random() * 0.2; // Lower slippage for high volume
+    } else {
+      // Default behavior for other transaction types
+      isErased = Math.random() < 0.6;
+      size = Math.max(2, Math.min(8, Math.log(transaction.amount) / 2.5));
+      speed = Math.max(0.5, Math.min(2, 2 - (Date.now() - transaction.timestamp) / 10000));
+      slippage = Math.random() * 0.3;
+    }
+    
     const idlerPath = isErased ? paths.idler.erased : paths.idler.whichPath;
     const idlerEndNode = nodes[idlerPath[idlerPath.length - 1] as keyof typeof nodes];
-    
-    const size = Math.max(2, Math.min(8, Math.log(transaction.amount) / 2.5));
-    const speed = Math.max(0.5, Math.min(2, 2 - (Date.now() - transaction.timestamp) / 10000));
-    const slippage = Math.random() * 0.3; // 0-30% slippage
     
     // Signal photon (direct to D0)
     const signal: Photon = {
@@ -909,36 +1039,101 @@ const PureVisualRetrocausality = forwardRef<PureVisualRetrocausalityRef, PureVis
     };
   }, [constrainPan]);
 
-  // Process selected token data into photon pairs
+  // Process Jupiter data and Birdeye trades into photon pairs
   useEffect(() => {
-    if (!selectedToken) return;
+    if (!selectedToken || !jupiterData) return;
     
     const canvas = canvasRef.current;
     if (!canvas) return;
     
-    // Create a mock transaction based on selected token for visualization
-    const mockTransaction: Transaction = {
-      signature: `selected-${selectedToken.id}`,
+    // Create photon pairs based on Jupiter market data
+    const marketCapTransaction: Transaction = {
+      signature: `jupiter-mcap-${selectedToken.id}`,
       timestamp: Date.now(),
-      type: 'SELECTION',
-      amount: selectedToken.mcap || 0,
-      price: selectedToken.usdPrice || 0,
-      side: 'BUY',
-      user: 'user',
+      type: 'MARKET_CAP',
+      amount: jupiterData.marketCap,
+      price: jupiterData.price,
+      side: jupiterData.priceChangePercent24h >= 0 ? 'BUY' : 'SELL',
+      user: 'jupiter',
       slot: 0,
       fee: 0
     };
     
-    // Clear existing photons and create new ones for selected token
+    // Clear existing photons and create new ones for Jupiter data
     photonPairsRef.current = [];
-    const photonPair = createPhotonPair(mockTransaction, canvas.width, canvas.height);
-    photonPairsRef.current.push(photonPair);
+    const marketCapPhotonPair = createPhotonPair(marketCapTransaction, canvas.width, canvas.height);
+    photonPairsRef.current.push(marketCapPhotonPair);
     
     // Cap simultaneous photons (last 30 tx)
     if (photonPairsRef.current.length > 30) {
       photonPairsRef.current = photonPairsRef.current.slice(-30);
     }
-  }, [selectedToken, createPhotonPair]);
+  }, [selectedToken, jupiterData, createPhotonPair]);
+
+  // Track processed trades to avoid duplicates
+  const processedTradesRef = useRef<Set<string>>(new Set());
+
+  // Process Birdeye trades into photon pairs
+  useEffect(() => {
+    if (!trades || trades.length === 0) return;
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    // Create photon pairs for each new trade (only process new ones)
+    trades.forEach((trade, index) => {
+      const tradeId = `${trade.tx_hash}-${trade.ins_index}`;
+      
+      // Skip if we've already processed this trade
+      if (processedTradesRef.current.has(tradeId)) {
+        return;
+      }
+      
+      // Mark as processed
+      processedTradesRef.current.add(tradeId);
+      
+      const tradeTransaction: Transaction = {
+        signature: trade.tx_hash,
+        timestamp: trade.block_unix_time * 1000,
+        type: 'TRADE',
+        amount: trade.volume_usd,
+        price: trade.base.price,
+        side: trade.base.type_swap === 'to' ? 'BUY' : 'SELL',
+        user: trade.owner,
+        slot: trade.block_number,
+        fee: 0
+      };
+      
+      const tradePhotonPair = createPhotonPair(tradeTransaction, canvas.width, canvas.height);
+      photonPairsRef.current.push(tradePhotonPair);
+      
+      // Add a small delay between photon pairs for better visual separation
+      setTimeout(() => {
+        // Optional: Add additional visual effects for high-volume trades
+        if (trade.volume_usd > 10000) {
+          // Create a secondary photon pair for high-volume trades
+          const secondaryTransaction: Transaction = {
+            ...tradeTransaction,
+            signature: `${tradeTransaction.signature}_secondary`,
+            type: 'HIGH_VOLUME_TRADE'
+          };
+          const secondaryPhotonPair = createPhotonPair(secondaryTransaction, canvas.width, canvas.height);
+          photonPairsRef.current.push(secondaryPhotonPair);
+        }
+      }, 200);
+    });
+    
+    // Cap simultaneous photons (last 50 tx to allow more animation)
+    if (photonPairsRef.current.length > 50) {
+      photonPairsRef.current = photonPairsRef.current.slice(-50);
+    }
+    
+    // Clean up old processed trades (keep last 100)
+    if (processedTradesRef.current.size > 100) {
+      const tradesArray = Array.from(processedTradesRef.current);
+      processedTradesRef.current = new Set(tradesArray.slice(-100));
+    }
+  }, [trades, createPhotonPair]);
 
   // Handle legend visibility
   useEffect(() => {

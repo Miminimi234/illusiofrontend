@@ -2,8 +2,6 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import PureVisualRetrocausality, { PureVisualRetrocausalityRef } from "./PureVisualRetrocausality";
-import SolanaTransactions from "./SolanaTransactions";
-import TokenHolders from "./TokenHolders";
 import axios from 'axios';
 
 interface NavigationHubProps {
@@ -48,7 +46,6 @@ interface SearchToken {
   updatedAt: string;
 }
 
-type TabType = 'trades' | 'holders';
 
 // Validation function to check if search query looks like a token address or name
 const isValidTokenQuery = (query: string): boolean => {
@@ -69,11 +66,9 @@ export default function NavigationHub({ isOpen, onClose }: NavigationHubProps) {
   const [isSearching, setIsSearching] = useState(false);
   const [selectedToken, setSelectedToken] = useState<SearchToken | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabType>('trades');
   const [showHelp, setShowHelp] = useState(false);
   const [showLegend, setShowLegend] = useState(false);
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
-  const [holders, setHolders] = useState<any[]>([]);
   const [showInvalidInput, setShowInvalidInput] = useState(false);
   const [predictionData, setPredictionData] = useState({
     confidence: 0.75,
@@ -109,10 +104,6 @@ export default function NavigationHub({ isOpen, onClose }: NavigationHubProps) {
     }
   };
 
-  // Handle holders updates from TokenHolders
-  const handleHoldersUpdate = useCallback((newHolders: any[]) => {
-    setHolders(newHolders);
-  }, []);
 
   // Zoom control handlers
   const handleZoomIn = useCallback(() => {
@@ -206,10 +197,6 @@ export default function NavigationHub({ isOpen, onClose }: NavigationHubProps) {
     return `$${num.toFixed(2)}`;
   };
 
-  const tabs = [
-    { id: 'trades' as TabType, label: 'Trades', count: 0 },
-    { id: 'holders' as TabType, label: 'Holders', count: holders.length }
-  ];
 
   return (
     <AnimatePresence mode="wait">
@@ -439,8 +426,7 @@ export default function NavigationHub({ isOpen, onClose }: NavigationHubProps) {
                 <p className="text-sm text-white/70">{selectedToken.name}</p>
               </div>
               <div className="ml-auto text-right">
-                <div className="text-lg font-bold text-white">{formatNumber(selectedToken.usdPrice)}</div>
-                <div className="text-sm text-white/60">Market Cap: {formatNumber(selectedToken.mcap)}</div>
+                <div className="text-lg font-bold text-white">Market Cap: {formatNumber(selectedToken.mcap)}</div>
               </div>
             </div>
           </motion.div>
@@ -471,8 +457,8 @@ export default function NavigationHub({ isOpen, onClose }: NavigationHubProps) {
                   <div className="text-lg font-bold text-purple-300">$45K</div>
                 </div>
                 <div className="bg-transparent border border-white/10 rounded-lg p-3">
-                  <div className="text-xs text-white/60 mb-1">Holders</div>
-                  <div className="text-lg font-bold text-orange-300">{holders.length}</div>
+                  <div className="text-xs text-white/60 mb-1">Volume</div>
+                  <div className="text-lg font-bold text-orange-300">$45K</div>
                 </div>
               </div>
             </div>
@@ -502,146 +488,103 @@ export default function NavigationHub({ isOpen, onClose }: NavigationHubProps) {
           </div>
         </motion.div>
 
-        {/* Main Content */}
+        {/* Main Content - Full Width Quantum Field */}
         <motion.div 
-          className="flex flex-col lg:flex-row h-[calc(100vh-200px)] relative"
+          className="h-[calc(100vh-200px)] relative"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.4 }}
         >
-          {/* Left: Quantum Field (58% on desktop, 65% on tablet, full width on mobile) */}
-          <div className="w-full lg:w-[58%] xl:w-[58%] 2xl:w-[58%] md:w-[65%] h-1/2 lg:h-full relative">
-            <PureVisualRetrocausality 
-              ref={visualRef}
-              onNodeHover={setHoveredNode}
-              predictionData={predictionData}
-              selectedToken={selectedToken}
-              isSearching={isAnalyzing}
-            />
-            
-            {/* Legend Button - Bottom Right Corner */}
-            <div className="absolute bottom-4 right-4 z-20">
-              <button
-                onClick={() => setShowLegend(!showLegend)}
-                className="px-3 py-2 bg-black/80 hover:bg-black/90 border border-white/30 rounded-full text-white/70 hover:text-white text-sm transition-all duration-200 shadow-lg"
-              >
-                Legend
-              </button>
-            </div>
-            
-            {/* Zoom Controls - Bottom Left Corner */}
-            <div className="absolute bottom-4 left-4 flex flex-row space-x-2 z-20">
-              <button
-                onClick={handleZoomIn}
-                className="w-8 h-8 bg-black/80 hover:bg-black/90 border border-white/30 rounded-full flex items-center justify-center text-white hover:text-blue-300 transition-all duration-200 shadow-lg"
-                title="Zoom In"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-              </button>
-              <button
-                onClick={handleZoomOut}
-                className="w-8 h-8 bg-black/80 hover:bg-black/90 border border-white/30 rounded-full flex items-center justify-center text-white hover:text-blue-300 transition-all duration-200 shadow-lg"
-                title="Zoom Out"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 12H6" />
-                </svg>
-              </button>
-            </div>
-            
-            {/* Legend Overlay */}
-            {showLegend && (
-              <div className="absolute bottom-12 right-4 bg-black/95 border border-white/30 rounded-lg p-5 text-white text-sm max-w-sm shadow-xl z-20">
-                <h4 className="font-bold mb-4 text-blue-300 text-base">QUANTUM FIELD LEGEND</h4>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-4 h-4 bg-red-500 rounded-full border border-white/20"></div>
-                    <div>
-                      <div className="font-semibold text-red-300">LASER</div>
-                      <div className="text-xs text-white/70">Quantum light source</div>
-                    </div>
+          <PureVisualRetrocausality 
+            ref={visualRef}
+            onNodeHover={setHoveredNode}
+            predictionData={predictionData}
+            selectedToken={selectedToken}
+            isSearching={isAnalyzing}
+          />
+          
+          {/* Legend Button - Bottom Right Corner */}
+          <div className="absolute bottom-4 right-4 z-20">
+            <button
+              onClick={() => setShowLegend(!showLegend)}
+              className="px-3 py-2 bg-black/80 hover:bg-black/90 border border-white/30 rounded-full text-white/70 hover:text-white text-sm transition-all duration-200 shadow-lg"
+            >
+              Legend
+            </button>
+          </div>
+          
+          {/* Zoom Controls - Bottom Left Corner */}
+          <div className="absolute bottom-4 left-4 flex flex-row space-x-2 z-20">
+            <button
+              onClick={handleZoomIn}
+              className="w-8 h-8 bg-black/80 hover:bg-black/90 border border-white/30 rounded-full flex items-center justify-center text-white hover:text-blue-300 transition-all duration-200 shadow-lg"
+              title="Zoom In"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+            </button>
+            <button
+              onClick={handleZoomOut}
+              className="w-8 h-8 bg-black/80 hover:bg-black/90 border border-white/30 rounded-full flex items-center justify-center text-white hover:text-blue-300 transition-all duration-200 shadow-lg"
+              title="Zoom Out"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 12H6" />
+              </svg>
+            </button>
+          </div>
+          
+          {/* Legend Overlay */}
+          {showLegend && (
+            <div className="absolute bottom-12 right-4 bg-black/95 border border-white/30 rounded-lg p-5 text-white text-sm max-w-sm shadow-xl z-20">
+              <h4 className="font-bold mb-4 text-blue-300 text-base">QUANTUM FIELD LEGEND</h4>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-4 h-4 bg-red-500 rounded-full border border-white/20"></div>
+                  <div>
+                    <div className="font-semibold text-red-300">LASER</div>
+                    <div className="text-xs text-white/70">Quantum light source</div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-4 h-4 bg-blue-500 rounded-full border border-white/20"></div>
-                    <div>
-                      <div className="font-semibold text-blue-300">BBO</div>
-                      <div className="text-xs text-white/70">Entanglement crystal</div>
-                    </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-4 h-4 bg-blue-500 rounded-full border border-white/20"></div>
+                  <div>
+                    <div className="font-semibold text-blue-300">BBO</div>
+                    <div className="text-xs text-white/70">Entanglement crystal</div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-4 h-4 bg-cyan-500 rounded-full border border-white/20 transform rotate-45"></div>
-                    <div>
-                      <div className="font-semibold text-cyan-300">BS (Beam Splitters)</div>
-                      <div className="text-xs text-white/70">Split quantum signals</div>
-                    </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-4 h-4 bg-cyan-500 rounded-full border border-white/20 transform rotate-45"></div>
+                  <div>
+                    <div className="font-semibold text-cyan-300">BS (Beam Splitters)</div>
+                    <div className="text-xs text-white/70">Split quantum signals</div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-4 h-4 bg-green-500 border border-white/20 transform rotate-45"></div>
-                    <div>
-                      <div className="font-semibold text-green-300">M (Mirrors)</div>
-                      <div className="text-xs text-white/70">Reflect quantum info</div>
-                    </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-4 h-4 bg-green-500 border border-white/20 transform rotate-45"></div>
+                  <div>
+                    <div className="font-semibold text-green-300">M (Mirrors)</div>
+                    <div className="text-xs text-white/70">Reflect quantum info</div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-4 h-4 bg-white rounded-full border border-white/20"></div>
-                    <div>
-                      <div className="font-semibold text-white">D (Detectors)</div>
-                      <div className="text-xs text-white/70">Measure quantum states</div>
-                    </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-4 h-4 bg-white rounded-full border border-white/20"></div>
+                  <div>
+                    <div className="font-semibold text-white">D (Detectors)</div>
+                    <div className="text-xs text-white/70">Measure quantum states</div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 bg-blue-400 rounded-full border border-white/20"></div>
-                    <div>
-                      <div className="font-semibold text-blue-300">PREDICTION ENGINE</div>
-                      <div className="text-xs text-white/70">Analyzes all data</div>
-                    </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-6 h-6 bg-blue-400 rounded-full border border-white/20"></div>
+                  <div>
+                    <div className="font-semibold text-blue-300">PREDICTION ENGINE</div>
+                    <div className="text-xs text-white/70">Analyzes all data</div>
                   </div>
                 </div>
               </div>
-            )}
-          </div>
-
-          {/* Divider - Always visible */}
-          <div className="hidden lg:block absolute left-[58%] top-0 w-px bg-white/10 h-full z-10"></div>
-          <div className="lg:hidden w-full h-px bg-white/10"></div>
-
-          {/* Right: Stream Panel (42% on desktop, 35% on tablet, full width on mobile) */}
-          <div className="w-full lg:w-[42%] xl:w-[42%] 2xl:w-[42%] md:w-[35%] h-1/2 lg:h-full flex flex-col">
-            {/* Tabs */}
-            <div className="flex border-b border-white/10">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`px-4 py-3 text-sm font-medium relative cursor-pointer ${
-                    activeTab === tab.id
-                      ? 'text-white border-b-2 border-blue-400'
-                      : 'text-white/60 hover:text-white/80'
-                  }`}
-                >
-                  {tab.label}
-                  <span className="ml-2 px-1.5 py-0.5 bg-white/10 text-xs rounded">
-                    {tab.count}
-                  </span>
-                </button>
-              ))}
             </div>
-
-            {/* Tab Content */}
-            <div className="flex-1 overflow-hidden">
-              {activeTab === 'trades' && (
-                <SolanaTransactions selectedToken={selectedToken} />
-              )}
-              {activeTab === 'holders' && (
-                <TokenHolders 
-                  selectedToken={selectedToken}
-                  onHoldersUpdate={handleHoldersUpdate}
-                />
-              )}
-            </div>
-          </div>
+          )}
         </motion.div>
 
         {/* Help Modal */}

@@ -24,11 +24,7 @@ export default function NavigationPage() {
     tokens,
     connectionStatus,
     loading: solanaLoading,
-    reconnect,
-    addToken,
-    replaceWithSearchToken,
-    resetToOriginalTokens,
-    isSearchMode
+    reconnect
   } = useFirebaseWebSocket();
 
   // Initialize loading state

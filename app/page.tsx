@@ -40,21 +40,19 @@ export default function Page() {
     tokens,
     connectionStatus,
     loading: solanaLoading,
-    reconnect,
-    addToken,
-    replaceWithSearchToken,
-    resetToOriginalTokens,
-    isSearchMode
+    reconnect
   } = useFirebaseWebSocket();
 
   // Handle adding searched tokens to the list (REPLACE mode)
   const handleAddToken = (newToken: any) => {
-    replaceWithSearchToken(newToken);
+    // TODO: Implement token addition logic
+    console.log('Add token:', newToken);
   };
 
   // Handle resetting to original tokens
   const handleResetTokens = () => {
-    resetToOriginalTokens();
+    // TODO: Implement token reset logic
+    console.log('Reset tokens');
   };
 
 
@@ -330,7 +328,7 @@ export default function Page() {
               onClose={() => saveScopeState(false)}
               onAddToken={handleAddToken}
               onResetTokens={handleResetTokens}
-              isSearchMode={isSearchMode}
+              isSearchMode={false}
             />
           )}
         </AnimatePresence>

@@ -193,10 +193,7 @@ class AIForecastService {
     }
     
     // Top holders concentration
-    const topHolders = tokenData.audit?.topHoldersPercentage || 
-                      tokenData.audit?.topHolders || 
-                      tokenData.topHoldersPercentage || 
-                      tokenData.topHolders;
+    const topHolders = tokenData.audit?.topHoldersPercentage;
     
     if (topHolders !== undefined && topHolders !== null) {
       const topHoldersNum = parseFloat(topHolders.toString());
@@ -206,10 +203,7 @@ class AIForecastService {
     }
     
     // Dev holding
-    const devHolding = tokenData.audit?.devBalancePercentage || 
-                      tokenData.audit?.devHoldingPercentage || 
-                      tokenData.devHoldingPercentage || 
-                      tokenData.devBalancePercentage;
+    const devHolding = tokenData.audit?.devBalancePercentage;
     
     if (devHolding !== undefined && devHolding !== null) {
       const devHoldingNum = parseFloat(devHolding.toString());
@@ -252,44 +246,46 @@ class AIForecastService {
     } else if (tokenData.jupiterCreatedAt || tokenData.createdAt || tokenData.created_at) {
       // Fallback to calculating age if no calculated age provided
       const createdAt = tokenData.jupiterCreatedAt || tokenData.createdAt || tokenData.created_at;
-      const createdDate = new Date(createdAt);
-      const now = new Date();
-      const age = now.getTime() - createdDate.getTime();
-      const seconds = Math.floor(age / 1000);
-      const minutes = Math.floor(seconds / 60);
-      const hours = Math.floor(minutes / 60);
-      const days = Math.floor(hours / 24);
-      
-      let ageDescription = '';
-      let survivalStatus = '';
-      
-      if (seconds < 60) {
-        ageDescription = `${seconds}s ago`;
-        survivalStatus = 'VERY NEW MEMECOIN - High risk, analyze initial metrics';
-      } else if (minutes < 60) {
-        ageDescription = `${minutes}m ago`;
-        survivalStatus = 'NEW MEMECOIN - Moderate risk, check momentum';
-      } else if (hours < 24) {
-        ageDescription = `${hours}h ago`;
-        survivalStatus = 'FRESH MEMECOIN - Analyze volume sustainability';
-      } else if (days < 1) {
-        ageDescription = `${days}d ago`;
-        survivalStatus = 'FRESH MEMECOIN - Still in initial phase';
-      } else if (days < 7) {
-        ageDescription = `${days}d ago`;
-        survivalStatus = 'ESTABLISHED MEMECOIN - Good survival, analyze stability';
-      } else if (days < 30) {
-        ageDescription = `${days}d ago`;
-        survivalStatus = 'MATURE MEMECOIN - Proven survival, high confidence potential';
-      } else if (days < 365) {
-        ageDescription = `${days}d ago`;
-        survivalStatus = 'LONG-TERM MEMECOIN - Excellent survival, analyze trends';
-      } else {
-        ageDescription = `${days}d ago`;
-        survivalStatus = 'VETERAN MEMECOIN - Long-term survival, analyze fundamentals';
+      if (createdAt) {
+        const createdDate = new Date(createdAt);
+        const now = new Date();
+        const age = now.getTime() - createdDate.getTime();
+        const seconds = Math.floor(age / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+        const days = Math.floor(hours / 24);
+        
+        let ageDescription = '';
+        let survivalStatus = '';
+        
+        if (seconds < 60) {
+          ageDescription = `${seconds}s ago`;
+          survivalStatus = 'VERY NEW MEMECOIN - High risk, analyze initial metrics';
+        } else if (minutes < 60) {
+          ageDescription = `${minutes}m ago`;
+          survivalStatus = 'NEW MEMECOIN - Moderate risk, check momentum';
+        } else if (hours < 24) {
+          ageDescription = `${hours}h ago`;
+          survivalStatus = 'FRESH MEMECOIN - Analyze volume sustainability';
+        } else if (days < 1) {
+          ageDescription = `${days}d ago`;
+          survivalStatus = 'FRESH MEMECOIN - Still in initial phase';
+        } else if (days < 7) {
+          ageDescription = `${days}d ago`;
+          survivalStatus = 'ESTABLISHED MEMECOIN - Good survival, analyze stability';
+        } else if (days < 30) {
+          ageDescription = `${days}d ago`;
+          survivalStatus = 'MATURE MEMECOIN - Proven survival, high confidence potential';
+        } else if (days < 365) {
+          ageDescription = `${days}d ago`;
+          survivalStatus = 'LONG-TERM MEMECOIN - Excellent survival, analyze trends';
+        } else {
+          ageDescription = `${days}d ago`;
+          survivalStatus = 'VETERAN MEMECOIN - Long-term survival, analyze fundamentals';
+        }
+        
+        context.push(`Age: ${ageDescription} (${survivalStatus})`);
       }
-      
-      context.push(`Age: ${ageDescription} (${survivalStatus})`);
     }
     
     // Confidence score
@@ -304,8 +300,8 @@ class AIForecastService {
     const patternMarketCap = tokenData.marketCap ? parseFloat(tokenData.marketCap.toString()) : 0;
     const patternLiquidity = tokenData.liquidity ? parseFloat(tokenData.liquidity.toString()) : 0;
     const patternHolders = tokenData.holderCount ? parseFloat(tokenData.holderCount.toString()) : 0;
-    const patternTopHolders = tokenData.audit?.topHoldersPercentage || tokenData.topHoldersPercentage || 0;
-    const patternDevHolding = tokenData.audit?.devBalancePercentage || tokenData.devHoldingPercentage || 0;
+    const patternTopHolders = tokenData.audit?.topHoldersPercentage || 0;
+    const patternDevHolding = tokenData.audit?.devBalancePercentage || 0;
     
     // Check if token matches HIGH CONFIDENCE HOLD PATTERN
     const isHighConfidenceHoldPattern = (

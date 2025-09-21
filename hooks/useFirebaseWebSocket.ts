@@ -73,10 +73,10 @@ export const useFirebaseWebSocket = () => {
     
     try {
       // Reference to the tokens collection in Firebase
-      const tokensRef = ref(database, 'tokens');
+      const tokensDatabaseRef = ref(database, 'tokens');
       
       // First, try to get initial data
-      const snapshot = await get(tokensRef);
+      const snapshot = await get(tokensDatabaseRef);
       if (snapshot.exists()) {
         const tokensData = snapshot.val();
         const tokensArray = Object.keys(tokensData).map(key => ({
@@ -98,7 +98,7 @@ export const useFirebaseWebSocket = () => {
       }
 
       // Set up real-time listener
-      onValue(tokensRef, (snapshot) => {
+      onValue(tokensDatabaseRef, (snapshot) => {
         if (!isMountedRef.current) return;
         
         if (snapshot.exists()) {
@@ -142,7 +142,7 @@ export const useFirebaseWebSocket = () => {
       });
 
       // Store reference for cleanup
-      tokensRef.current = tokensRef;
+      tokensRef.current = tokensDatabaseRef;
       
     } catch (error) {
       console.error('Firebase connection error:', error);

@@ -74,9 +74,9 @@ export default function ScopeBoard() {
                 }
               </span>
             </div>
-            {connectionStatus.lastUpdate && (
+            {connectionStatus.lastConnected && (
               <span className="text-xs text-white/60">
-                Last update: {connectionStatus.lastUpdate.toLocaleTimeString()}
+                Last connected: {new Date(connectionStatus.lastConnected).toLocaleTimeString()}
               </span>
             )}
           </div>

@@ -905,7 +905,7 @@ const TokenCardBase: React.FC<CardProps> = React.memo(({ token, visibleMintsRef,
           {/* Social Links */}
           <div className="flex items-center gap-1">
             {/* Pump.fun Icon - Show for tokens ending with "pump" */}
-            {token.mint.toLowerCase().endsWith('pump') && (
+            {token.mint && token.mint.toLowerCase().endsWith('pump') && (
               <a
                 href={`https://pump.fun/${token.mint}`}
                 target="_blank"
@@ -922,7 +922,7 @@ const TokenCardBase: React.FC<CardProps> = React.memo(({ token, visibleMintsRef,
             )}
             
             {/* BONK Icon - Show for tokens ending with "bonk" */}
-            {token.mint.toLowerCase().endsWith('bonk') && (
+            {token.mint && token.mint.toLowerCase().endsWith('bonk') && (
               <a
                 href={`https://bonkcoin.com`}
                 target="_blank"
@@ -1159,10 +1159,10 @@ function TokenColumn({
                 const companionForToken = attachedCompanion && attachedCompanion.tokenMint === token.mint ? attachedCompanion.name : null;
                 
                 // Check if token should be highlighted
-                const isPumpFunToken = token.mint && token.mint.toLowerCase().includes('pump') || 
+                const isPumpFunToken = (token.mint && token.mint.toLowerCase().includes('pump')) || 
                                      (token.name && token.name.toLowerCase().includes('pump')) ||
                                      (token.symbol && token.symbol.toLowerCase().includes('pump'));
-                const isBonkToken = token.mint && token.mint.toLowerCase().includes('bonk') || 
+                const isBonkToken = (token.mint && token.mint.toLowerCase().includes('bonk')) || 
                                    (token.name && token.name.toLowerCase().includes('bonk')) ||
                                    (token.symbol && token.symbol.toLowerCase().includes('bonk'));
                 
@@ -3316,8 +3316,8 @@ export const Scope = ({
                   // Convert the search token to the format expected by SCOPE (TokenData interface)
                   const scopeToken = {
                     // Basic token info
-                    address: token.id, // Using id as address
-                    mint: token.id, // Primary identifier
+                    address: token.mint, // Using id as address
+                    mint: token.mint, // Primary identifier
                     name: token.name,
                     symbol: token.symbol,
                     imageUrl: token.icon, // Fixed field name
@@ -3418,7 +3418,7 @@ export const Scope = ({
                   setFocusToken(scopeToken);
                   
                   // Scroll to the token
-                  const tokenElement = document.querySelector(`[data-mint="${token.id}"]`);
+                  const tokenElement = document.querySelector(`[data-mint="${token.mint}"]`);
                   if (tokenElement) {
                     tokenElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
                   }

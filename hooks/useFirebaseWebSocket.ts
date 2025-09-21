@@ -5,6 +5,7 @@ import { database } from '@/lib/firebase';
 
 export interface TokenData {
   id: string;
+  mint: string; // Alias for id to maintain compatibility
   name: string;
   symbol: string;
   icon?: string;
@@ -69,24 +70,20 @@ export const useFirebaseWebSocket = () => {
   const connect = useCallback(async () => {
     if (!isMountedRef.current) return;
     
-    console.log('🔥 Firebase connection attempt started...');
     setConnectionStatus(prev => ({ ...prev, isConnecting: true, error: null }));
     
     try {
       // Reference to the tokens collection in Firebase
       const tokensDatabaseRef = ref(database, 'jupiter_tokens/recent/tokens');
-      console.log('🔥 Firebase database reference created:', tokensDatabaseRef);
       
       // First, try to get initial data
-      console.log('🔥 Attempting to fetch initial data from Firebase...');
       const snapshot = await get(tokensDatabaseRef);
-      console.log('🔥 Firebase snapshot received:', snapshot.exists() ? 'Data exists' : 'No data');
       
       if (snapshot.exists()) {
         const tokensData = snapshot.val();
-        console.log('🔥 Tokens data from Firebase:', Object.keys(tokensData).length, 'tokens');
         const tokensArray = Object.keys(tokensData).map(key => ({
           id: key,
+          mint: key, // Add mint as alias for id
           ...tokensData[key],
           lastUpdate: Date.now()
         })) as TokenData[];
@@ -94,11 +91,9 @@ export const useFirebaseWebSocket = () => {
         if (isMountedRef.current) {
           setTokens(tokensArray);
           setLoading(false);
-          console.log('🔥 Tokens set successfully:', tokensArray.length);
         }
       } else {
         // If no data exists, initialize with empty array
-        console.log('🔥 No data in Firebase, initializing with empty array');
         if (isMountedRef.current) {
           setTokens([]);
           setLoading(false);
@@ -106,21 +101,18 @@ export const useFirebaseWebSocket = () => {
       }
 
       // Set up real-time listener
-      console.log('🔥 Setting up Firebase real-time listener...');
       onValue(tokensDatabaseRef, (snapshot) => {
         if (!isMountedRef.current) return;
-        
-        console.log('🔥 Firebase real-time update received:', snapshot.exists() ? 'Data exists' : 'No data');
         
         if (snapshot.exists()) {
           const tokensData = snapshot.val();
           const tokensArray = Object.keys(tokensData).map(key => ({
             id: key,
+            mint: key, // Add mint as alias for id
             ...tokensData[key],
             lastUpdate: Date.now()
           })) as TokenData[];
           
-          console.log('🔥 Real-time tokens update:', tokensArray.length, 'tokens');
           setTokens(tokensArray);
           setConnectionStatus({
             isConnected: true,
@@ -131,7 +123,6 @@ export const useFirebaseWebSocket = () => {
           setLoading(false);
           reconnectAttempts.current = 0; // Reset on successful connection
         } else {
-          console.log('🔥 Real-time update: No data in Firebase');
           setTokens([]);
           setConnectionStatus({
             isConnected: true,
@@ -142,7 +133,7 @@ export const useFirebaseWebSocket = () => {
           setLoading(false);
         }
       }, (error) => {
-        console.error('🔥 Firebase listener error:', error);
+        console.error('Firebase listener error:', error);
         if (isMountedRef.current) {
           setConnectionStatus({
             isConnected: false,
@@ -158,7 +149,7 @@ export const useFirebaseWebSocket = () => {
       tokensRef.current = tokensDatabaseRef;
       
     } catch (error) {
-      console.error('🔥 Firebase connection error:', error);
+      console.error('Firebase connection error:', error);
       if (isMountedRef.current) {
         setConnectionStatus({
           isConnected: false,
@@ -167,7 +158,6 @@ export const useFirebaseWebSocket = () => {
           lastConnected: connectionStatus.lastConnected
         });
         setLoading(false);
-        console.log('🔥 Attempting to reconnect due to error...');
         attemptReconnect();
       }
     }

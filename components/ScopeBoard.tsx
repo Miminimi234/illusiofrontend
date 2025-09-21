@@ -35,18 +35,18 @@ export default function ScopeBoard() {
   const sixHoursAgo = now - (6 * 60 * 60 * 1000);
   
   const newPairs = tokens.filter((t) => {
-    const createdAt = new Date(t.createdAt).getTime();
-    return createdAt > oneHourAgo; // Very recent tokens
+    const updatedAt = new Date(t.updatedAt).getTime();
+    return updatedAt > oneHourAgo; // Very recent tokens
   });
   
   const finalStretch = tokens.filter((t) => {
-    const createdAt = new Date(t.createdAt).getTime();
-    return createdAt <= oneHourAgo && createdAt > sixHoursAgo; // 1-6 hours old
+    const updatedAt = new Date(t.updatedAt).getTime();
+    return updatedAt <= oneHourAgo && updatedAt > sixHoursAgo; // 1-6 hours old
   });
   
   const migrated = tokens.filter((t) => {
-    const createdAt = new Date(t.createdAt).getTime();
-    return createdAt <= sixHoursAgo; // Older than 6 hours
+    const updatedAt = new Date(t.updatedAt).getTime();
+    return updatedAt <= sixHoursAgo; // Older than 6 hours
   });
 
   return (
@@ -124,7 +124,7 @@ function TokenColumn({ title, tokens }: { title: string; tokens: TokenData[] }) 
         ) : (
           tokens.map((t, index) => (
             <div
-              key={t.address}
+              key={t.id}
               className={`p-3 rounded bg-white/5 border border-white/10 hover:border-white/30 transition-all duration-300 hover:shadow-glow ${
                 index === 0 ? 'ring-2 ring-green-400/50' : ''
               }`}
@@ -140,12 +140,12 @@ function TokenColumn({ title, tokens }: { title: string; tokens: TokenData[] }) 
                     )}
                   </div>
                   <div className="text-xs opacity-70 mt-1">
-                    {t.address.slice(0,8)}…{t.address.slice(-6)}
+                    {t.id.slice(0,8)}…{t.id.slice(-6)}
                   </div>
                 </div>
-                {t.imageUrl && (
+                {t.icon && (
                   <img 
-                    src={t.imageUrl} 
+                    src={t.icon} 
                     alt={t.symbol}
                     className="w-8 h-8 rounded-full"
                     onError={(e) => {
@@ -157,23 +157,23 @@ function TokenColumn({ title, tokens }: { title: string; tokens: TokenData[] }) 
               
               <div className="mt-2 space-y-1">
                 <div className="text-sm opacity-80">
-                  <span className="text-green-400">MC:</span> ${t.marketCap.toLocaleString()}
+                  <span className="text-green-400">MC:</span> ${t.mcap ? t.mcap.toLocaleString() : 'N/A'}
                 </div>
                 <div className="text-sm opacity-80">
-                  <span className="text-blue-400">Liquidity:</span> ${t.liquidity.toLocaleString()}
+                  <span className="text-blue-400">Liquidity:</span> ${t.liquidity ? t.liquidity.toLocaleString() : 'N/A'}
                 </div>
                 <div className="text-sm opacity-80">
-                  <span className="text-purple-400">Vol 24h:</span> ${t.volume24h.toLocaleString()}
+                  <span className="text-purple-400">Vol 24h:</span> ${t.volume24h ? t.volume24h.toLocaleString() : 'N/A'}
                 </div>
-                {t.price && t.price > 0 && (
+                {t.usdPrice && t.usdPrice > 0 && (
                   <div className="text-sm opacity-80">
-                    <span className="text-yellow-400">Price:</span> ${t.price.toFixed(6)}
+                    <span className="text-yellow-400">Price:</span> ${t.usdPrice.toFixed(6)}
                   </div>
                 )}
               </div>
               
               <div className="mt-2">
-                <CreationTimeDisplay createdAt={t.createdAt} />
+                <CreationTimeDisplay createdAt={t.updatedAt} />
               </div>
             </div>
           ))

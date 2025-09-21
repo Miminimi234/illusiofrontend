@@ -199,15 +199,15 @@ export default function OracleHub({ isOpen, onClose }: OracleHubProps) {
                   <div className="max-h-32 overflow-y-auto">
                     <div className="space-y-1">
                       {tokens.slice(0, 5).map((token, index) => (
-                        <div key={token.address} className="text-xs text-white/70 bg-black/30 p-2 rounded" style={{ fontFamily: 'VT323, monospace' }}>
+                        <div key={token.id} className="text-xs text-white/70 bg-black/30 p-2 rounded" style={{ fontFamily: 'VT323, monospace' }}>
                           <div className="flex justify-between">
                             <span className="truncate max-w-[120px]">{token.symbol || 'Unknown'}</span>
                             <span className="text-green-400">
-                              ${token.price ? token.price.toFixed(6) : 'N/A'}
+                              ${token.usdPrice ? token.usdPrice.toFixed(6) : 'N/A'}
                             </span>
                           </div>
                           <div className="text-white/50 truncate max-w-[200px]">
-                            {token.address.slice(0, 8)}...{token.address.slice(-6)}
+                            {token.id.slice(0, 8)}...{token.id.slice(-6)}
                           </div>
                         </div>
                       ))}

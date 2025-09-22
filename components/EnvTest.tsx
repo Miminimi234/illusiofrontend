@@ -16,6 +16,16 @@ export default function EnvTest() {
     
     console.log('🔍 Environment Variables Test:', vars);
     setEnvVars(vars);
+
+    // Also check server-side environment variables
+    fetch('/api/env-check')
+      .then(res => res.json())
+      .then(data => {
+        console.log('🔍 Server-side Environment Variables:', data);
+      })
+      .catch(err => {
+        console.error('❌ Failed to fetch server env vars:', err);
+      });
   }, []);
 
   return (

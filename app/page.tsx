@@ -19,7 +19,6 @@ const OracleHub = dynamic(() => import("@/components/OracleHub"), { ssr: false }
 const RetroGeometry = dynamic(() => import("@/components/RetroGeometry"), { ssr: false });
 const Manifesto = dynamic(() => import("@/components/Manifesto"), { ssr: false });
 const CornerLogo = dynamic(() => import("@/components/CornerLogo"), { ssr: false });
-const EnvTest = dynamic(() => import("@/components/EnvTest"), { ssr: false });
 
 export default function Page() {
   const [isNavigationHubOpen, setIsNavigationHubOpen] = useState(false);
@@ -225,9 +224,6 @@ export default function Page() {
             />
           )}
         </AnimatePresence>
-
-        {/* Environment Test - Remove after fixing */}
-        <EnvTest />
       </main>
     </ErrorBoundary>
   );

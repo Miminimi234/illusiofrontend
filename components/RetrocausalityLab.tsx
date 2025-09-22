@@ -1,6 +1,7 @@
 "use client";
 import React, { useRef, useEffect, useState } from 'react';
 import p5 from 'p5';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface RetrocausalityLabProps {
   isOpen?: boolean;
@@ -32,6 +33,7 @@ export default function RetrocausalityLab({ isOpen = true, className = "" }: Ret
     timeline: '1h',
     confidence: 0.75
   });
+  const [activeTab, setActiveTab] = useState<'simulation' | 'trades' | 'holders'>('simulation');
 
   useEffect(() => {
     if (!sketchRef.current) return;
@@ -329,8 +331,239 @@ export default function RetrocausalityLab({ isOpen = true, className = "" }: Ret
   }, [isOpen, predictionData]);
 
   return (
-    <div className={`w-full h-full ${className}`}>
-      <div ref={sketchRef} className="w-full h-full" />
+    <div className={`w-full h-full relative ${className}`}>
+      {/* Tab Navigation */}
+      <div className="absolute top-4 left-4 z-10 flex space-x-2">
+        <button
+          onClick={() => setActiveTab('simulation')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+            activeTab === 'simulation'
+              ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40'
+              : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80'
+          }`}
+        >
+          Simulation
+        </button>
+        <button
+          onClick={() => setActiveTab('trades')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+            activeTab === 'trades'
+              ? 'bg-green-500/20 text-green-400 border border-green-500/40'
+              : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80'
+          }`}
+        >
+          Live Trades
+        </button>
+        <button
+          onClick={() => setActiveTab('holders')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+            activeTab === 'holders'
+              ? 'bg-purple-500/20 text-purple-400 border border-purple-500/40'
+              : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80'
+          }`}
+        >
+          Holders
+        </button>
+      </div>
+
+      {/* Simulation Canvas */}
+      <AnimatePresence mode="wait">
+        {activeTab === 'simulation' && (
+          <motion.div
+            key="simulation"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="w-full h-full"
+          >
+            <div ref={sketchRef} className="w-full h-full" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Live Trades Panel */}
+      <AnimatePresence mode="wait">
+        {activeTab === 'trades' && (
+          <motion.div
+            key="trades"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+            className="absolute inset-0 bg-black/90 backdrop-blur-sm p-6 overflow-y-auto"
+          >
+            <div className="max-w-6xl mx-auto">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-green-400 mb-2">Live Trades</h2>
+                <p className="text-white/60">Real-time trading activity and quantum entanglement patterns</p>
+              </div>
+              
+              {/* Trade Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                  <div className="text-green-400 text-sm font-medium">Total Volume</div>
+                  <div className="text-2xl font-bold text-white">$2.4M</div>
+                  <div className="text-green-400 text-xs">+12.5%</div>
+                </div>
+                <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                  <div className="text-blue-400 text-sm font-medium">Active Trades</div>
+                  <div className="text-2xl font-bold text-white">1,247</div>
+                  <div className="text-blue-400 text-xs">+8.2%</div>
+                </div>
+                <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                  <div className="text-purple-400 text-sm font-medium">Quantum Events</div>
+                  <div className="text-2xl font-bold text-white">89</div>
+                  <div className="text-purple-400 text-xs">+3.1%</div>
+                </div>
+                <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                  <div className="text-yellow-400 text-sm font-medium">Entanglement Rate</div>
+                  <div className="text-2xl font-bold text-white">94.2%</div>
+                  <div className="text-yellow-400 text-xs">+0.8%</div>
+                </div>
+              </div>
+
+              {/* Live Trades List */}
+              <div className="bg-white/5 rounded-lg border border-white/10 overflow-hidden">
+                <div className="px-6 py-4 border-b border-white/10">
+                  <h3 className="text-lg font-semibold text-white">Recent Trades</h3>
+                </div>
+                <div className="divide-y divide-white/10">
+                  {Array.from({ length: 10 }).map((_, i) => (
+                    <div key={i} className="px-6 py-4 hover:bg-white/5 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
+                          <div>
+                            <div className="text-white font-medium">Trade #{1000 + i}</div>
+                            <div className="text-white/60 text-sm">Quantum entangled pair detected</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-green-400 font-medium">+$1,234.56</div>
+                          <div className="text-white/60 text-sm">2.3s ago</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Holders Panel */}
+      <AnimatePresence mode="wait">
+        {activeTab === 'holders' && (
+          <motion.div
+            key="holders"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+            className="absolute inset-0 bg-black/90 backdrop-blur-sm p-6 overflow-y-auto"
+          >
+            <div className="max-w-6xl mx-auto">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-purple-400 mb-2">Token Holders</h2>
+                <p className="text-white/60">Quantum state distribution and holder analytics</p>
+              </div>
+              
+              {/* Holder Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                  <div className="text-purple-400 text-sm font-medium">Total Holders</div>
+                  <div className="text-2xl font-bold text-white">3,247</div>
+                  <div className="text-purple-400 text-xs">+156</div>
+                </div>
+                <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                  <div className="text-blue-400 text-sm font-medium">Quantum States</div>
+                  <div className="text-2xl font-bold text-white">1,892</div>
+                  <div className="text-blue-400 text-xs">+23</div>
+                </div>
+                <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                  <div className="text-green-400 text-sm font-medium">Entangled Pairs</div>
+                  <div className="text-2xl font-bold text-white">945</div>
+                  <div className="text-green-400 text-xs">+12</div>
+                </div>
+                <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                  <div className="text-yellow-400 text-sm font-medium">Coherence</div>
+                  <div className="text-2xl font-bold text-white">87.3%</div>
+                  <div className="text-yellow-400 text-xs">+2.1%</div>
+                </div>
+              </div>
+
+              {/* Top Holders */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="bg-white/5 rounded-lg border border-white/10 overflow-hidden">
+                  <div className="px-6 py-4 border-b border-white/10">
+                    <h3 className="text-lg font-semibold text-white">Top Holders</h3>
+                  </div>
+                  <div className="divide-y divide-white/10">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <div key={i} className="px-6 py-4 hover:bg-white/5 transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white text-sm font-bold">
+                              {i + 1}
+                            </div>
+                            <div>
+                              <div className="text-white font-medium">0x{Math.random().toString(16).substr(2, 8)}...</div>
+                              <div className="text-white/60 text-sm">Quantum State: {['Superposition', 'Entangled', 'Coherent'][i % 3]}</div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-white font-medium">{((i + 1) * 12.5).toFixed(1)}%</div>
+                            <div className="text-white/60 text-sm">{((i + 1) * 1000).toLocaleString()} tokens</div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-white/5 rounded-lg border border-white/10 overflow-hidden">
+                  <div className="px-6 py-4 border-b border-white/10">
+                    <h3 className="text-lg font-semibold text-white">Quantum Distribution</h3>
+                  </div>
+                  <div className="p-6">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-white/80">Superposition States</span>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-32 h-2 bg-white/10 rounded-full overflow-hidden">
+                            <div className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full" style={{ width: '68%' }}></div>
+                          </div>
+                          <span className="text-white text-sm">68%</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-white/80">Entangled Pairs</span>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-32 h-2 bg-white/10 rounded-full overflow-hidden">
+                            <div className="h-full bg-gradient-to-r from-green-500 to-cyan-500 rounded-full" style={{ width: '24%' }}></div>
+                          </div>
+                          <span className="text-white text-sm">24%</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-white/80">Coherent States</span>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-32 h-2 bg-white/10 rounded-full overflow-hidden">
+                            <div className="h-full bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full" style={{ width: '8%' }}></div>
+                          </div>
+                          <span className="text-white text-sm">8%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

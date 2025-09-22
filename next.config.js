@@ -1,16 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  env: {
-    NEXT_PUBLIC_SERVER_URL: process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:8080',
-    NEXT_PUBLIC_WS_URL: process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080/ws',
-    NEXT_PUBLIC_GROK_API_KEY: process.env.NEXT_PUBLIC_GROK_API_KEY,
-    NEXT_PUBLIC_OPENAI_API_KEY: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
-    NEXT_PUBLIC_HELIUS_API_KEY: process.env.NEXT_PUBLIC_HELIUS_API_KEY,
-    NEXT_PUBLIC_BIRDEYE_API_KEY: process.env.NEXT_PUBLIC_BIRDEYE_API_KEY
-  },
   // Force rebuild to clear cache
   generateBuildId: async () => {
-    return 'build-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9)
+    return 'env-fix-v2-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9)
   },
   // Properly handle static assets and prevent Next.js from treating media files as pages
   pageExtensions: ['tsx', 'ts', 'jsx', 'js'],

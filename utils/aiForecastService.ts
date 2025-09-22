@@ -4,6 +4,12 @@ interface ForecastData {
   signals: string[];
   recommendation: 'STRONG_BUY' | 'BUY' | 'HOLD' | 'DCA' | 'SELL' | 'STRONG_SELL';
   reasoning: string;
+  momentum: {
+    priceMomentum: string;
+    volumeMomentum: string;
+    acceleration: string;
+    heatingCooling: 'Hot' | 'Warm' | 'Cool' | 'Cold';
+  };
 }
 
 interface TokenData {
@@ -350,7 +356,13 @@ CRITICAL REQUIREMENTS:
   "confidence": number, // 0 to 100
   "signals": string[], // Array of 3-5 key market signals
   "recommendation": "STRONG_BUY" | "BUY" | "HOLD" | "DCA" | "SELL" | "STRONG_SELL",
-  "reasoning": string // Brief analysis explaining the forecast
+  "reasoning": string, // Brief analysis explaining the forecast
+  "momentum": {
+    "priceMomentum": string, // "Strong Bullish", "Bullish", "Neutral", "Bearish", "Strong Bearish"
+    "volumeMomentum": string, // "Accelerating", "Stable", "Declining"
+    "acceleration": string, // "Rapid", "Moderate", "Slow", "Stagnant"
+    "heatingCooling": "Hot" | "Warm" | "Cool" | "Cold"
+  }
 }
 
 ANALYSIS CRITERIA - MEMECOIN LONGEVITY & STABILITY:
@@ -461,7 +473,7 @@ Provide a professional, data-driven analysis focusing on token longevity and sta
         const forecast = JSON.parse(content);
         
         // Validate the response structure
-        if (!forecast.score || !forecast.confidence || !forecast.signals || !forecast.recommendation || !forecast.reasoning) {
+        if (!forecast.score || !forecast.confidence || !forecast.signals || !forecast.recommendation || !forecast.reasoning || !forecast.momentum) {
           throw new Error('Invalid forecast structure from AI');
         }
         

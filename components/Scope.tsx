@@ -530,6 +530,19 @@ const formatSupply = (supply: number): string => {
   }
 };
 
+// Helper function to format volume numbers with 1 decimal place
+const formatVolume = (volume: number): string => {
+  if (volume >= 1e9) {
+    return `${(volume / 1e9).toFixed(1)}B`;
+  } else if (volume >= 1e6) {
+    return `${(volume / 1e6).toFixed(1)}M`;
+  } else if (volume >= 1e3) {
+    return `${(volume / 1e3).toFixed(1)}K`;
+  } else {
+    return volume.toFixed(1);
+  }
+};
+
 
 // Memoized TokenCard for performance
 type CardProps = {
@@ -2359,8 +2372,8 @@ function InsightsColumn({
                         <div className="flex items-center space-x-2">
                           <span className="font-semibold">
                             {jupiterData && jupiterData.usdPrice ? 
-                              `$${jupiterData.usdPrice.toFixed(8)}` : 
-                              (focusToken.usdPrice ? `$${parseFloat(focusToken.usdPrice).toFixed(8)}` : 'N/A')
+                              `$${jupiterData.usdPrice.toFixed(1)}` : 
+                              (focusToken.usdPrice ? `$${parseFloat(focusToken.usdPrice).toFixed(1)}` : 'N/A')
                             }
                           </span>
                           {jupiterRefreshing && (
@@ -2373,7 +2386,7 @@ function InsightsColumn({
                     {jupiterData && (
                       <div className="text-white/50 text-sm font-mono mt-1">
                         {selectedTimeframe}: <span className={`font-semibold ${jupiterData && jupiterData.priceChange !== undefined && jupiterData.priceChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                          {jupiterData && jupiterData.priceChange !== undefined ? (jupiterData.priceChange >= 0 ? '+' : '') + jupiterData.priceChange.toFixed(2) + '%' : 'N/A'}
+                          {jupiterData && jupiterData.priceChange !== undefined ? (jupiterData.priceChange >= 0 ? '+' : '') + jupiterData.priceChange.toFixed(1) + '%' : 'N/A'}
                         </span>
                       </div>
                     )}
@@ -2387,30 +2400,30 @@ function InsightsColumn({
                         <div className="space-y-1">
                           <div className="flex items-center justify-between">
                             <span className="text-green-400 text-sm">Buy:</span>
-                            <span className="text-sm font-semibold">${jupiterData.volume.buy.toLocaleString()}</span>
+                            <span className="text-sm font-semibold">${formatVolume(jupiterData.volume.buy)}</span>
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-red-400 text-sm">Sell:</span>
-                            <span className="text-sm font-semibold">${jupiterData.volume.sell.toLocaleString()}</span>
+                            <span className="text-sm font-semibold">${formatVolume(jupiterData.volume.sell)}</span>
                           </div>
                           <div className="flex items-center justify-between text-white/60 border-t border-white/10 pt-1">
                             <span className="text-sm">Total:</span>
-                            <span className="text-sm font-semibold">${jupiterData.volume.total.toLocaleString()}</span>
+                            <span className="text-sm font-semibold">${formatVolume(jupiterData.volume.total)}</span>
                           </div>
                         </div>
                       ) : focusToken.stats24h ? (
                         <div className="space-y-1">
                           <div className="flex items-center justify-between">
                             <span className="text-green-400 text-sm">Buy:</span>
-                            <span className="text-sm font-semibold">${(focusToken.stats24h.buyVolume || 0).toLocaleString()}</span>
+                            <span className="text-sm font-semibold">${formatVolume(focusToken.stats24h.buyVolume || 0)}</span>
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-red-400 text-sm">Sell:</span>
-                            <span className="text-sm font-semibold">${(focusToken.stats24h.sellVolume || 0).toLocaleString()}</span>
+                            <span className="text-sm font-semibold">${formatVolume(focusToken.stats24h.sellVolume || 0)}</span>
                           </div>
                           <div className="flex items-center justify-between text-white/60 border-t border-white/10 pt-1">
                             <span className="text-sm">Total:</span>
-                            <span className="text-sm font-semibold">${((focusToken.stats24h.buyVolume || 0) + (focusToken.stats24h.sellVolume || 0)).toLocaleString()}</span>
+                            <span className="text-sm font-semibold">${formatVolume((focusToken.stats24h.buyVolume || 0) + (focusToken.stats24h.sellVolume || 0))}</span>
                           </div>
                         </div>
                       ) : (
@@ -2541,26 +2554,53 @@ function InsightsColumn({
               <div className="grid grid-cols-2 gap-x-6 gap-y-2">
                 <div>
                   <div className="text-white/50 text-sm font-mono mb-1">Price momentum</div>
-                  <div className="text-white text-sm font-mono">{metrics?.priceMomentum || "N/A"}</div>
+                  <div className="text-white text-sm font-mono">
+                    {forecastLoading ? (
+                      <div className="animate-spin rounded-full h-3 w-3 border-b border-white/60"></div>
+                    ) : (
+                      aiForecast?.momentum?.priceMomentum || "N/A"
+                    )}
+                  </div>
                 </div>
                 <div>
                   <div className="text-white/50 text-sm font-mono mb-1">Volume momentum</div>
-                  <div className="text-white text-sm font-mono">{metrics?.volumeMomentum || "N/A"}</div>
+                  <div className="text-white text-sm font-mono">
+                    {forecastLoading ? (
+                      <div className="animate-spin rounded-full h-3 w-3 border-b border-white/60"></div>
+                    ) : (
+                      aiForecast?.momentum?.volumeMomentum || "N/A"
+                    )}
+                  </div>
                 </div>
                 <div>
                   <div className="text-white/50 text-sm font-mono mb-1">Acceleration</div>
-                  <div className="text-white text-sm font-mono">{metrics?.acceleration || "N/A"}</div>
+                  <div className="text-white text-sm font-mono">
+                    {forecastLoading ? (
+                      <div className="animate-spin rounded-full h-3 w-3 border-b border-white/60"></div>
+                    ) : (
+                      aiForecast?.momentum?.acceleration || "N/A"
+                    )}
+                  </div>
                 </div>
                 <div>
                   <div className="text-white/50 text-sm font-mono mb-1">Heating/Cooling</div>
                   <div className={`inline-flex items-center px-2 py-1 rounded-full text-sm font-mono border ${
-                    metrics?.heatingCooling === 'Hot' 
+                    forecastLoading ? 'bg-gray-500/15 text-gray-300 border-gray-500/30' :
+                    aiForecast?.momentum?.heatingCooling === 'Hot' 
                       ? 'bg-red-500/15 text-red-300 border-red-500/30' 
-                      : metrics?.heatingCooling === 'Warm' 
+                      : aiForecast?.momentum?.heatingCooling === 'Warm' 
                         ? 'bg-yellow-500/15 text-yellow-300 border-yellow-500/30' 
-                        : 'bg-blue-500/15 text-blue-300 border-blue-500/30'
+                        : aiForecast?.momentum?.heatingCooling === 'Cool'
+                          ? 'bg-blue-500/15 text-blue-300 border-blue-500/30'
+                          : aiForecast?.momentum?.heatingCooling === 'Cold'
+                            ? 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
+                            : 'bg-gray-500/15 text-gray-300 border-gray-500/30'
                   }`}>
-                    {metrics?.heatingCooling || 'N/A'}
+                    {forecastLoading ? (
+                      <div className="animate-spin rounded-full h-3 w-3 border-b border-white/60"></div>
+                    ) : (
+                      aiForecast?.momentum?.heatingCooling || 'N/A'
+                    )}
                   </div>
                 </div>
               </div>
@@ -3172,14 +3212,28 @@ export const Scope = ({
       : applyCustomFilters(allTokens.filter(t => {
         const createdAt = new Date(t.createdAt).getTime();
         return createdAt > oneHourAgo; // Very recent tokens
-      })).slice(0, 50);
+      }))
+      .sort((a, b) => {
+        // Sort by creation time in descending order (most recent first)
+        const timeA = new Date(a.createdAt).getTime();
+        const timeB = new Date(b.createdAt).getTime();
+        return timeB - timeA;
+      })
+      .slice(0, 50);
       
     const filled = assetType === 'stocks' 
       ? [] // No active tokens for stocks
       : applyCustomFilters(allTokens.filter(t => {
         const createdAt = new Date(t.createdAt).getTime();
         return createdAt <= oneHourAgo && createdAt > sixHoursAgo; // 1-6 hours old
-      })).slice(0, 30);
+      }))
+      .sort((a, b) => {
+        // Sort by creation time in descending order (most recent first)
+        const timeA = new Date(a.createdAt).getTime();
+        const timeB = new Date(b.createdAt).getTime();
+        return timeB - timeA;
+      })
+      .slice(0, 30);
       
     // EDGE: No tokens on edge - temporarily removed
     const onEdge: any[] = [];
@@ -3189,7 +3243,14 @@ export const Scope = ({
       : applyCustomFilters(allTokens.filter(t => {
         const createdAt = new Date(t.createdAt).getTime();
         return createdAt <= sixHoursAgo; // Older than 6 hours
-      })).slice(0, 30);
+      }))
+      .sort((a, b) => {
+        // Sort by creation time in descending order (most recent first)
+        const timeA = new Date(a.createdAt).getTime();
+        const timeB = new Date(b.createdAt).getTime();
+        return timeB - timeA;
+      })
+      .slice(0, 30);
     
     // console.log("✅ Filtered tokens:", {
     //   newPairs: newPairs.length,
@@ -3756,17 +3817,17 @@ export const Scope = ({
                 title={showSearchResults ? "SEARCH RESULTS" : "FRESH MINTS"} 
                 items={showSearchResults ? searchResults.map(convertJupiterToToken) : filteredTokens.newPairs} 
                 className="border-r border-neutral-800/60 flex-1 min-w-0"
-                visibleMintsRef={visibleMintsRef}
-                agents={agents}
-                newTokenMint={newTokenMint}
-                attachedCompanion={attachedCompanion}
-                onCompanionDetach={handleCompanionDetach}
-                onHoverEnter={pauseLiveOnHover}
-                onHoverLeave={resumeLiveAfterHover}
-                onFocusToken={setFocusToken}
-                onDragTargetChange={setDragTargetToken}
-                filters={filters}
-                onCompanionAttached={(companionName, token) => {
+                  visibleMintsRef={visibleMintsRef}
+                  agents={agents}
+                  newTokenMint={newTokenMint}
+                  attachedCompanion={attachedCompanion}
+                  onCompanionDetach={handleCompanionDetach}
+                  onHoverEnter={pauseLiveOnHover}
+                  onHoverLeave={resumeLiveAfterHover}
+                  onFocusToken={setFocusToken}
+                  onDragTargetChange={setDragTargetToken}
+                  filters={filters}
+                  onCompanionAttached={(companionName, token) => {
                     // Handle companion attachment
                     handleCompanionAttached(companionName, token);
                     

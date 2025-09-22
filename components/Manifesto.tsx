@@ -60,8 +60,8 @@ This is not prophecy. It is craft. Measure, clean, simulate, compare, then act w
               <div className="text-base space-y-3 leading-tight">
                 {manifestoText.split('\n\n').map((paragraph, index) => (
                   <p key={index} className="text-white/90">
-                    {paragraph}
-                  </p>
+                          {paragraph}
+                        </p>
                 ))}
               </div>
               
@@ -86,7 +86,7 @@ This is not prophecy. It is craft. Measure, clean, simulate, compare, then act w
                       className="h-6 w-auto opacity-80 hover:opacity-100 transition-opacity duration-200"
                     />
                   </div>
-                </div>
+                    </div>
               </div>
             </div>
           </motion.div>

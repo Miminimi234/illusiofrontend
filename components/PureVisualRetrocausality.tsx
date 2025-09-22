@@ -114,6 +114,15 @@ interface PureVisualRetrocausalityProps {
     expectedRange: { min: number; max: number };
     upProbability: number;
     downProbability: number;
+    momentum?: {
+      priceMomentum: 'Strong Bullish' | 'Bullish' | 'Neutral' | 'Bearish' | 'Strong Bearish';
+      volumeMomentum: 'Accelerating' | 'Stable' | 'Declining';
+      acceleration: 'Rapid' | 'Moderate' | 'Slow' | 'Stagnant';
+      heatingCooling: 'Hot' | 'Warm' | 'Cool' | 'Cold';
+    };
+    signals?: string[];
+    riskLevel?: 'Low' | 'Medium' | 'High' | 'Extreme';
+    timeHorizon?: 'Short' | 'Medium' | 'Long';
   };
   selectedToken?: SearchToken | null;
   isSearching?: boolean;
@@ -130,7 +139,16 @@ const PureVisualRetrocausality = forwardRef<PureVisualRetrocausalityRef, PureVis
     confidence: 0.75,
     expectedRange: { min: 5, max: 15 },
     upProbability: 0.6,
-    downProbability: 0.4
+    downProbability: 0.4,
+    momentum: {
+      priceMomentum: 'Neutral',
+      volumeMomentum: 'Stable',
+      acceleration: 'Moderate',
+      heatingCooling: 'Warm'
+    },
+    signals: [],
+    riskLevel: 'Medium',
+    timeHorizon: 'Medium'
   },
   selectedToken = null,
   isSearching = false
@@ -144,9 +162,8 @@ const PureVisualRetrocausality = forwardRef<PureVisualRetrocausalityRef, PureVis
   const lastTradeTimeRef = useRef<number>(0);
   const mousePosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const engineBreathRef = useRef<number>(0);
-  const legendVisibleRef = useRef<boolean>(true);
-  const legendTimeoutRef = useRef<NodeJS.Timeout>();
   const currentStateRef = useRef<string>('');
+  const tradesContainerRef = useRef<HTMLDivElement>(null);
   
   // Zoom and pan state
   const zoomRef = useRef<number>(1);
@@ -154,15 +171,47 @@ const PureVisualRetrocausality = forwardRef<PureVisualRetrocausalityRef, PureVis
   const isDraggingRef = useRef<boolean>(false);
   const lastMousePosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  // Jupiter data and Birdeye trades for animation
+  // Jupiter data for animation
   const [jupiterData, setJupiterData] = useState<JupiterData | null>(null);
   const [jupiterLoading, setJupiterLoading] = useState(false);
-  const { trades } = useBirdeyeTrades({
-    tokenAddress: selectedToken?.id,
-    enabled: !!selectedToken?.id,
-    maxTrades: 5,
-    interval: 3000
+
+  
+  // Legend state
+  const [showLegend, setShowLegend] = useState(false);
+  
+  // Live trades hook
+  const { trades, loading: tradesLoading, error: tradesError } = useBirdeyeTrades({
+    tokenMint: selectedToken?.id || '',
+    limit: 20,
+    pollInterval: 6000
   });
+
+  // Debug logging for live trades
+  useEffect(() => {
+    console.log("🔍 PureVisualRetrocausality - Live trades state:", {
+      selectedToken: selectedToken?.symbol || 'none',
+      tokenMint: selectedToken?.id || 'none',
+      selectedTokenObject: selectedToken,
+      tradesCount: trades.length,
+      loading: tradesLoading,
+      error: tradesError
+    });
+  }, [selectedToken, trades.length, tradesLoading, tradesError]);
+
+  // Auto-scroll to bottom when new trades arrive (newest trades at bottom)
+  useEffect(() => {
+    if (trades.length > 0 && tradesContainerRef.current) {
+      const container = tradesContainerRef.current;
+      console.log("🔍 Trades container debug:", {
+        scrollHeight: container.scrollHeight,
+        clientHeight: container.clientHeight,
+        scrollTop: container.scrollTop,
+        tradesCount: trades.length,
+        needsScroll: container.scrollHeight > container.clientHeight
+      });
+      container.scrollTop = container.scrollHeight;
+    }
+  }, [trades]);
 
   // Fetch Jupiter data for selected token
   const fetchJupiterData = useCallback(async (tokenAddress: string) => {
@@ -199,16 +248,14 @@ const PureVisualRetrocausality = forwardRef<PureVisualRetrocausalityRef, PureVis
     }
   }, []);
 
+
   // Fetch Jupiter data when token is selected
   useEffect(() => {
     if (selectedToken?.id) {
       fetchJupiterData(selectedToken.id);
-      // Clear processed trades when switching tokens
-      processedTradesRef.current.clear();
     } else {
       setJupiterData(null);
       // Clear everything when no token selected
-      processedTradesRef.current.clear();
       photonPairsRef.current = [];
     }
   }, [selectedToken?.id, fetchJupiterData]);
@@ -266,12 +313,12 @@ const PureVisualRetrocausality = forwardRef<PureVisualRetrocausalityRef, PureVis
     };
   }, []);
 
-  // Path definitions with weights
+  // Path definitions with weights - extended paths through the quantum circuit
   const paths = {
-    signal: ['BBO', 'D0'],
+    signal: ['BBO', 'BSb', 'D0'], // Signal goes through BSb to D0
     idler: {
-      whichPath: ['BBO', 'BSa', 'D1'], // 40% weight
-      erased: ['BBO', 'BSa', 'BSb', 'BSc', 'D3'] // 60% weight
+      whichPath: ['BBO', 'BSa', 'BSb', 'BSc', 'D2'], // Which-path: goes through multiple beam splitters
+      erased: ['BBO', 'BSa', 'BSb', 'BSd', 'D4'] // Erased: different path through BSd
     }
   };
 
@@ -304,27 +351,49 @@ const PureVisualRetrocausality = forwardRef<PureVisualRetrocausalityRef, PureVis
       const marketCapSize = Math.log10(transaction.amount || 1);
       isErased = marketCapSize > 8; // Large market caps more likely to be erased
       size = Math.max(3, Math.min(10, marketCapSize / 2));
-      speed = Math.max(0.8, Math.min(2.5, 1.5 + (marketCapSize - 6) / 4));
+      speed = Math.max(0.8, Math.min(2.0, 1.0 + (marketCapSize - 6) / 4)); // Faster speeds for longer paths
       slippage = Math.min(0.5, (transaction.amount || 0) / 1000000000); // Higher market cap = less slippage
     } else if (transaction.type === 'TRADE') {
       // Birdeye trade data - use trade volume and side for properties
       const tradeVolume = Math.log10(transaction.amount || 1);
-      isErased = transaction.side === 'SELL'; // Sell trades more likely to be erased
+      const priceImpact = Math.abs(transaction.price || 0);
+      
+      // Sell trades create more retrocausal effects (path erasure)
+      isErased = transaction.side === 'SELL' || Math.random() < 0.4;
+      
+      // Size based on trade volume
       size = Math.max(2, Math.min(8, tradeVolume / 3));
-      speed = Math.max(0.5, Math.min(2, 1 + tradeVolume / 5));
-      slippage = Math.random() * 0.4; // Trade slippage varies more
+      
+      // Speed based on trade urgency (recent trades move faster)
+      const tradeAge = Date.now() - transaction.timestamp;
+      const urgency = Math.max(0, 1 - tradeAge / 60000); // Fade over 1 minute
+      speed = Math.max(0.8, Math.min(2.0, 1.0 + urgency * 1.0)); // Faster speeds
+      
+      // Slippage based on trade size and price impact
+      slippage = Math.min(0.4, (transaction.amount || 0) / 1000000 + priceImpact / 100);
     } else if (transaction.type === 'HIGH_VOLUME_TRADE') {
       // High volume trades - create more dramatic effects
       const tradeVolume = Math.log10(transaction.amount || 1);
-      isErased = Math.random() < 0.3; // High volume trades less likely to be erased
+      const priceImpact = Math.abs(transaction.price || 0);
+      
+      // High volume trades have different retrocausal properties
+      isErased = transaction.side === 'SELL' ? Math.random() < 0.7 : Math.random() < 0.3;
+      
+      // Larger size for high volume trades
       size = Math.max(4, Math.min(12, tradeVolume / 2));
-      speed = Math.max(1, Math.min(3, 1.5 + tradeVolume / 3));
-      slippage = Math.random() * 0.2; // Lower slippage for high volume
+      
+      // Faster speed for high volume trades
+      const tradeAge = Date.now() - transaction.timestamp;
+      const urgency = Math.max(0, 1 - tradeAge / 30000); // Fade over 30 seconds
+      speed = Math.max(1.0, Math.min(2.5, 1.5 + urgency * 1.0)); // Even faster for high volume
+      
+      // Lower slippage for high volume trades
+      slippage = Math.min(0.2, (transaction.amount || 0) / 10000000 + priceImpact / 200);
     } else {
       // Default behavior for other transaction types
       isErased = Math.random() < 0.6;
       size = Math.max(2, Math.min(8, Math.log(transaction.amount) / 2.5));
-      speed = Math.max(0.5, Math.min(2, 2 - (Date.now() - transaction.timestamp) / 10000));
+      speed = Math.max(0.8, Math.min(2.0, 1.0)); // Consistent faster speed
       slippage = Math.random() * 0.3;
     }
     
@@ -374,9 +443,23 @@ const PureVisualRetrocausality = forwardRef<PureVisualRetrocausalityRef, PureVis
     };
   }, []);
 
-  // Update photon with buttery easing
+  // Update photon with buttery easing - independent of changing data
   const updatePhoton = useCallback((photon: Photon, deltaTime: number, canvasWidth: number, canvasHeight: number): void => {
+    // Use cached node positions to prevent photons from being affected by changing data
     const nodes = getCenteredNodes(canvasWidth, canvasHeight);
+    
+    // Debug logging for photon movement
+    if (photon.id.includes('signal') && Math.random() < 0.01) { // Log 1% of signal photons
+      console.log('Photon debug:', {
+        id: photon.id,
+        currentPathIndex: photon.currentPathIndex,
+        path: photon.path,
+        progress: photon.progress,
+        position: { x: photon.x, y: photon.y },
+        deltaTime
+      });
+    }
+    
     if (photon.currentPathIndex >= photon.path.length - 1) {
       // Photon reached destination
       const detectorId = photon.path[photon.path.length - 1];
@@ -409,11 +492,13 @@ const PureVisualRetrocausality = forwardRef<PureVisualRetrocausalityRef, PureVis
           phase: 0
         };
         
-        // Update state message
+        // Update state message based on trading data
         if (hitType === 'erased') {
-          currentStateRef.current = `Path erased → interference at D0 → confidence ↑ (±${predictionData.expectedRange.min}%)`;
+          const tradeCount = photonPairsRef.current.length;
+          currentStateRef.current = `Path erased → interference at D0 → confidence ↑ (${tradeCount} trades analyzed)`;
         } else {
-          currentStateRef.current = `Path known → no interference → confidence ↓ (±${predictionData.expectedRange.max}%)`;
+          const tradeCount = photonPairsRef.current.length;
+          currentStateRef.current = `Path known → no interference → confidence ↓ (${tradeCount} trades analyzed)`;
         }
       }
       
@@ -427,24 +512,41 @@ const PureVisualRetrocausality = forwardRef<PureVisualRetrocausalityRef, PureVis
 
     // Cubic-bezier easing: (0.22,0.61,0.36,1)
     const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
-    photon.progress += photon.speed * deltaTime * 0.001;
+    // Increase speed multiplier to make photons move faster through longer paths
+    photon.progress += photon.speed * deltaTime * 0.005;
     const easedProgress = easeOutCubic(Math.min(photon.progress, 1));
     
     if (photon.progress >= 1) {
+      // Move to next segment
       photon.progress = 0;
       photon.currentPathIndex++;
+      
+      // Update current position to the node we just reached
       photon.x = nextPos.x;
       photon.y = nextPos.y;
       
+      // Set up next target if there are more nodes in the path
       if (photon.currentPathIndex < photon.path.length - 1) {
         const nextTarget = nodes[photon.path[photon.currentPathIndex + 1] as keyof typeof nodes];
         photon.targetX = nextTarget.x;
         photon.targetY = nextTarget.y;
       }
     } else {
-      // Smooth interpolation
+      // Smooth interpolation between current and next node
       photon.x = currentPos.x + (nextPos.x - currentPos.x) * easedProgress;
       photon.y = currentPos.y + (nextPos.y - currentPos.y) * easedProgress;
+    }
+    
+    // Debug: Log photon progress
+    if (photon.id.includes('signal') && Math.random() < 0.1) { // Log 10% of signal photons
+      console.log(`Photon ${photon.id} progress:`, {
+        currentPathIndex: photon.currentPathIndex,
+        pathLength: photon.path.length,
+        progress: photon.progress.toFixed(3),
+        currentNode: photon.path[photon.currentPathIndex],
+        nextNode: photon.path[photon.currentPathIndex + 1],
+        position: { x: photon.x.toFixed(1), y: photon.y.toFixed(1) }
+      });
     }
 
     // Update trail with slippage encoding
@@ -715,52 +817,10 @@ const PureVisualRetrocausality = forwardRef<PureVisualRetrocausalityRef, PureVis
     });
   }, []);
 
-  // Draw interference patterns with animated phase drift
+  // Draw interference patterns with animated phase drift - DISABLED
   const drawInterferencePattern = useCallback((ctx: CanvasRenderingContext2D, canvasWidth: number, canvasHeight: number): void => {
-    if (!interferencePatternRef.current) return;
-    
-    const nodes = getCenteredNodes(canvasWidth, canvasHeight);
-    const pattern = interferencePatternRef.current;
-    const d0Pos = nodes.D0;
-    const timeSinceCreation = Date.now() - pattern.timestamp;
-    const fadeOut = Math.max(0, 1 - timeSinceCreation / 4000);
-    
-    if (fadeOut <= 0) return;
-    
-    ctx.save();
-    ctx.globalAlpha = fadeOut * 0.3;
-    
-    if (pattern.type === 'stripes') {
-      // Which-path: mild Gaussian stripes
-      ctx.strokeStyle = colors.sell;
-      ctx.lineWidth = 2;
-      ctx.shadowColor = colors.sell;
-      ctx.shadowBlur = 10;
-      
-      for (let i = 0; i < 2; i++) {
-        ctx.beginPath();
-        ctx.moveTo(d0Pos.x - 15, d0Pos.y - 8 + i * 16);
-        ctx.lineTo(d0Pos.x + 15, d0Pos.y - 8 + i * 16);
-        ctx.stroke();
-      }
-    } else {
-      // Erased: soft interference rings with phase drift
-      pattern.phase += 0.05;
-      
-      ctx.strokeStyle = colors.buy;
-      ctx.lineWidth = 1.5;
-      ctx.shadowColor = colors.buy;
-      ctx.shadowBlur = 15;
-      
-      for (let i = 0; i < 3; i++) {
-        const radius = 20 + i * 8 + Math.sin(pattern.phase + i) * 2;
-        ctx.beginPath();
-        ctx.arc(d0Pos.x, d0Pos.y, radius, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-    }
-    
-    ctx.restore();
+    // Interference pattern drawing disabled to remove thick green lines
+    return;
   }, []);
 
   // Draw retrocausal arcs with afterimage
@@ -790,27 +850,6 @@ const PureVisualRetrocausality = forwardRef<PureVisualRetrocausalityRef, PureVis
     });
   }, []);
 
-  // Draw legend chip
-  const drawLegend = useCallback((ctx: CanvasRenderingContext2D): void => {
-    if (!legendVisibleRef.current) return;
-    
-    ctx.save();
-    ctx.fillStyle = colors.text;
-    ctx.globalAlpha = 0.72;
-    ctx.font = '9px monospace';
-    ctx.textAlign = 'left';
-    
-    const legendLines = [
-      'Color = side • Thickness = size',
-      'Halo = impact • Ring = confidence'
-    ];
-    
-    legendLines.forEach((line, index) => {
-      ctx.fillText(line, 20, 30 + index * 12);
-    });
-    
-    ctx.restore();
-  }, []);
 
   // Draw state explanation
   const drawStateExplanation = useCallback((ctx: CanvasRenderingContext2D): void => {
@@ -841,6 +880,12 @@ const PureVisualRetrocausality = forwardRef<PureVisualRetrocausalityRef, PureVis
     const width = canvas.width;
     const height = canvas.height;
     
+    // Safety check to prevent infinite loops
+    if (width === 0 || height === 0) {
+      animationRef.current = requestAnimationFrame(animate);
+      return;
+    }
+    
     // Clear canvas
     drawBackground(ctx, width, height);
     
@@ -855,14 +900,37 @@ const PureVisualRetrocausality = forwardRef<PureVisualRetrocausalityRef, PureVis
     // Draw nodes with depth-of-field
     drawNodes(ctx, width, height);
     
-    // Update photon pairs
-    const deltaTime = timestamp - lastTradeTimeRef.current;
-    photonPairsRef.current = photonPairsRef.current.filter(pair => {
-      updatePhoton(pair.signal, deltaTime, width, height);
-      updatePhoton(pair.idler, deltaTime, width, height);
-      return pair.signal.currentPathIndex < pair.signal.path.length - 1 || 
-             pair.idler.currentPathIndex < pair.idler.path.length - 1;
+    // Update photon pairs with safety checks - each animation round is independent
+    const deltaTime = Math.min(timestamp - lastTradeTimeRef.current, 100); // Cap deltaTime to prevent large jumps
+    
+    // Update each animation round independently
+    activeAnimationRoundsRef.current.forEach((roundPairs, roundId) => {
+      roundPairs.forEach(pair => {
+        if (pair.signal && pair.idler) {
+          // Update both photons independently
+          updatePhoton(pair.signal, deltaTime, width, height);
+          updatePhoton(pair.idler, deltaTime, width, height);
+        }
+      });
     });
+    
+    // Filter main photon pairs array
+    photonPairsRef.current = photonPairsRef.current.filter(pair => {
+      if (pair.signal && pair.idler) {
+        // Keep the pair until BOTH photons complete their paths
+        const signalComplete = pair.signal.currentPathIndex >= pair.signal.path.length - 1;
+        const idlerComplete = pair.idler.currentPathIndex >= pair.idler.path.length - 1;
+        
+        // Only remove the pair when both photons have completed their journeys
+        return !(signalComplete && idlerComplete);
+      }
+      return false;
+    });
+    
+    // Limit number of photon pairs to prevent performance issues
+    if (photonPairsRef.current.length > 50) {
+      photonPairsRef.current = photonPairsRef.current.slice(-50);
+    }
     
     // Draw photons
     drawPhotons(ctx);
@@ -889,12 +957,15 @@ const PureVisualRetrocausality = forwardRef<PureVisualRetrocausalityRef, PureVis
     );
     
     // Draw UI elements (not affected by zoom/pan)
-    drawLegend(ctx);
     drawStateExplanation(ctx);
     
     lastTradeTimeRef.current = timestamp;
-    animationRef.current = requestAnimationFrame(animate);
-  }, [drawBackground, drawRails, drawNodes, drawPhotons, drawRetrocausalArcs, drawInterferencePattern, drawLegend, drawStateExplanation, updatePhoton]);
+    
+    // Schedule next frame
+    if (animationRef.current) {
+      animationRef.current = requestAnimationFrame(animate);
+    }
+  }, []); // Remove all dependencies to prevent unnecessary restarts
 
   // Constrain pan to container boundaries
   const constrainPan = useCallback((canvasWidth: number, canvasHeight: number) => {
@@ -1039,7 +1110,7 @@ const PureVisualRetrocausality = forwardRef<PureVisualRetrocausalityRef, PureVis
     };
   }, [constrainPan]);
 
-  // Process Jupiter data and Birdeye trades into photon pairs
+  // Process Jupiter data and Helius trades into photon pairs
   useEffect(() => {
     if (!selectedToken || !jupiterData) return;
     
@@ -1070,109 +1141,81 @@ const PureVisualRetrocausality = forwardRef<PureVisualRetrocausalityRef, PureVis
     }
   }, [selectedToken, jupiterData, createPhotonPair]);
 
-  // Track processed trades to avoid duplicates
+  // Track processed trades and animation rounds
   const processedTradesRef = useRef<Set<string>>(new Set());
-
-  // Process Birdeye trades into photon pairs
+  const activeAnimationRoundsRef = useRef<Map<string, PhotonPair[]>>(new Map());
+  
+  // Clear everything when token changes
   useEffect(() => {
-    if (!trades || trades.length === 0) return;
+    processedTradesRef.current.clear();
+    activeAnimationRoundsRef.current.clear();
+    photonPairsRef.current = [];
+  }, [selectedToken]);
+  
+  // Process each trade as a separate animation round
+  useEffect(() => {
+    if (!selectedToken || trades.length === 0) return;
     
     const canvas = canvasRef.current;
     if (!canvas) return;
     
-    // Create photon pairs for each new trade (only process new ones)
-    trades.forEach((trade, index) => {
-      const tradeId = `${trade.tx_hash}-${trade.ins_index}`;
-      
-      // Skip if we've already processed this trade
-      if (processedTradesRef.current.has(tradeId)) {
-        return;
-      }
-      
-      // Mark as processed
-      processedTradesRef.current.add(tradeId);
-      
-      const tradeTransaction: Transaction = {
-        signature: trade.tx_hash,
-        timestamp: trade.block_unix_time * 1000,
-        type: 'TRADE',
-        amount: trade.volume_usd,
-        price: trade.base.price,
-        side: trade.base.type_swap === 'to' ? 'BUY' : 'SELL',
-        user: trade.owner,
-        slot: trade.block_number,
-        fee: 0
-      };
-      
-      const tradePhotonPair = createPhotonPair(tradeTransaction, canvas.width, canvas.height);
-      photonPairsRef.current.push(tradePhotonPair);
-      
-      // Add a small delay between photon pairs for better visual separation
+    // Find new trades that haven't been processed yet
+    const newTrades = trades.filter(trade => !processedTradesRef.current.has(trade.txHash));
+    
+    if (newTrades.length === 0) return;
+    
+    // Process each new trade as a separate animation round
+    newTrades.forEach((trade, index) => {
+      // Stagger each animation round
       setTimeout(() => {
-        // Optional: Add additional visual effects for high-volume trades
-        if (trade.volume_usd > 10000) {
-          // Create a secondary photon pair for high-volume trades
-          const secondaryTransaction: Transaction = {
-            ...tradeTransaction,
-            signature: `${tradeTransaction.signature}_secondary`,
-            type: 'HIGH_VOLUME_TRADE'
-          };
-          const secondaryPhotonPair = createPhotonPair(secondaryTransaction, canvas.width, canvas.height);
-          photonPairsRef.current.push(secondaryPhotonPair);
-        }
-      }, 200);
+        processedTradesRef.current.add(trade.txHash);
+        
+        // Create a single photon pair for this trade
+        const tradeTransaction: Transaction = {
+          signature: trade.txHash,
+          timestamp: trade.blockUnixTime * 1000,
+          type: trade.volumeUsd > 10000 ? 'HIGH_VOLUME_TRADE' : 'TRADE',
+          amount: trade.amount,
+          price: trade.priceUsd,
+          side: (trade.side === 'buy' ? 'BUY' : 'SELL') as 'BUY' | 'SELL',
+          user: trade.owner,
+          slot: 0,
+          fee: 0
+        };
+        
+        const tradePhotonPair = createPhotonPair(tradeTransaction, canvas.width, canvas.height);
+        
+        // Create a separate animation round for this trade
+        const roundId = `round_${trade.txHash}_${Date.now()}`;
+        activeAnimationRoundsRef.current.set(roundId, [tradePhotonPair]);
+        
+        // Add to main photon pairs for rendering
+        photonPairsRef.current.push(tradePhotonPair);
+        
+        // Clean up this animation round after 10 seconds
+        setTimeout(() => {
+          activeAnimationRoundsRef.current.delete(roundId);
+          // Remove the photon pair from main array
+          photonPairsRef.current = photonPairsRef.current.filter(pair => pair.id !== tradePhotonPair.id);
+        }, 10000);
+        
+        console.log(`🔄 Created separate animation round for trade: ${trade.txHash}`);
+      }, index * 500); // 500ms delay between each animation round
     });
-    
-    // Cap simultaneous photons (last 50 tx to allow more animation)
-    if (photonPairsRef.current.length > 50) {
-      photonPairsRef.current = photonPairsRef.current.slice(-50);
-    }
-    
-    // Clean up old processed trades (keep last 100)
-    if (processedTradesRef.current.size > 100) {
-      const tradesArray = Array.from(processedTradesRef.current);
-      processedTradesRef.current = new Set(tradesArray.slice(-100));
-    }
-  }, [trades, createPhotonPair]);
+  }, [trades, selectedToken, createPhotonPair]);
 
-  // Handle legend visibility
-  useEffect(() => {
-    const hideLegend = () => {
-      legendVisibleRef.current = false;
-    };
-    
-    const showLegend = () => {
-      legendVisibleRef.current = true;
-      if (legendTimeoutRef.current) {
-        clearTimeout(legendTimeoutRef.current);
-      }
-      legendTimeoutRef.current = setTimeout(hideLegend, 4000);
-    };
-    
-    // Show legend initially
-    showLegend();
-    
-    // Show legend on inactivity
-    const inactivityTimer = setInterval(() => {
-      if (photonPairsRef.current.length === 0) {
-        showLegend();
-      }
-    }, 6000);
-    
-    return () => {
-      if (legendTimeoutRef.current) {
-        clearTimeout(legendTimeoutRef.current);
-      }
-      clearInterval(inactivityTimer);
-    };
-  }, []);
+
+
 
   // Start animation
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     
+    let isActive = true;
+    
     const resizeCanvas = () => {
+      if (!isActive) return;
       canvas.width = canvas.offsetWidth;
       canvas.height = canvas.offsetHeight;
     };
@@ -1180,23 +1223,192 @@ const PureVisualRetrocausality = forwardRef<PureVisualRetrocausalityRef, PureVis
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
     
-    animationRef.current = requestAnimationFrame(animate);
+    // Start animation loop
+    const startAnimation = () => {
+      if (!isActive) return;
+      animationRef.current = requestAnimationFrame(animate);
+    };
+    
+    startAnimation();
     
     return () => {
+      isActive = false;
       window.removeEventListener('resize', resizeCanvas);
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
+        animationRef.current = undefined;
       }
+      // Clear all refs to prevent memory leaks
+      photonPairsRef.current = [];
+      retrocausalArcsRef.current = [];
+      detectorHitsRef.current = [];
     };
-  }, [animate]);
+  }, []); // Remove animate dependency to prevent restarts
 
   return (
-    <div className="w-full h-full relative">
+    <div className="w-full h-full relative flex">
+      {/* Simulation Canvas - Always Visible */}
+      <div className="flex-1 relative">
       <canvas
         ref={canvasRef}
         className="w-full h-full"
         style={{ background: colors.background }}
       />
+        
+        {/* Legend Button - Bottom Right Corner */}
+        <div className="absolute bottom-4 right-4 z-20">
+          <button
+            onClick={() => setShowLegend(!showLegend)}
+            className="px-3 py-2 bg-black/80 hover:bg-black/90 border border-white/30 rounded-full text-white/70 hover:text-white text-sm transition-all duration-200 shadow-lg"
+          >
+            Legend
+          </button>
+        </div>
+        
+
+        {/* Legend Panel */}
+        {showLegend && (
+          <div className="absolute bottom-16 right-4 z-20 bg-black/90 backdrop-blur-sm border border-white/20 rounded-lg p-4 max-w-xs">
+            <h3 className="text-white font-bold mb-3 text-sm">Quantum Simulation Legend</h3>
+            <div className="space-y-2 text-xs">
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 rounded-full bg-blue-400"></div>
+                <span className="text-white/80">Signal Photon</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 rounded-full bg-red-400"></div>
+                <span className="text-white/80">Idler Photon</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 rounded-full bg-green-400"></div>
+                <span className="text-white/80">Entangled Pair</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 rounded-full bg-purple-400"></div>
+                <span className="text-white/80">Quantum State</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
+                <span className="text-white/80">Detector Hit</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 rounded-full bg-cyan-400"></div>
+                <span className="text-white/80">Retrocausal Arc</span>
+              </div>
+            </div>
+            <div className="mt-3 pt-2 border-t border-white/20">
+              <p className="text-white/60 text-xs">
+                Click and drag to pan, scroll to zoom, right-click for context menu
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Dashboard Panel - Always Visible */}
+      <div className="w-96 h-full bg-black/90 backdrop-blur-sm border-l border-white/10 flex flex-col">
+
+        {/* Live Trades Panel */}
+        <div className="flex-1 flex flex-col min-h-0">
+        <div className="p-4 border-b border-white/10 flex-shrink-0">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-white">Live Trades</h3>
+          </div>
+
+            {/* Connection Status */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                <div className={`w-3 h-3 rounded-full ${tradesLoading ? 'bg-yellow-400' : 'bg-green-400'}`}></div>
+                <span className="text-sm text-white/60">
+                  {tradesLoading ? 'Loading...' : 'Connected'}
+                </span>
+              </div>
+              {trades.length > 0 && (
+                <div className="text-xs text-white/40">
+                  {trades.length} trades
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Trades Display */}
+          <div className="flex-1 overflow-y-auto p-4" ref={tradesContainerRef}>
+            {!selectedToken ? (
+              <div className="flex items-center justify-center h-64">
+                <div className="text-center">
+                  <div className="text-white/40 text-lg mb-2">🔍</div>
+                  <div className="text-white/60">Select a token from the search bar to view live trades</div>
+                </div>
+              </div>
+            ) : tradesError ? (
+              <div className="flex items-center justify-center h-64">
+                <div className="text-center">
+                  <div className="text-red-400 text-lg mb-2">❌</div>
+                  <div className="text-red-400 mb-2">Error loading trades</div>
+                  <div className="text-white/60 text-sm">{tradesError}</div>
+                </div>
+              </div>
+            ) : tradesLoading ? (
+              <div className="flex items-center justify-center h-64">
+                <div className="text-center">
+                  <div className="animate-spin w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full mx-auto mb-2"></div>
+                  <div className="text-white/60">🔄 Connecting…</div>
+                </div>
+              </div>
+            ) : trades.length === 0 ? (
+              <div className="flex items-center justify-center h-64">
+                <div className="text-center">
+                  <div className="text-white/40 text-lg mb-2">📊</div>
+                  <div className="text-white/60">No recent trades found</div>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <ul className="space-y-2">
+                  {trades.map((trade) => (
+                    <li 
+                      key={trade.txHash} 
+                      className="flex items-center justify-between p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <span 
+                          className={`px-2 py-1 rounded text-xs font-bold ${
+                            trade.side === 'buy' 
+                              ? 'bg-green-500/20 text-green-400' 
+                              : 'bg-red-500/20 text-red-400'
+                          }`}
+                        >
+                          {trade.side ? trade.side.toUpperCase() : 'UNKNOWN'}
+                        </span>
+                        <span className="text-white font-mono text-sm">
+                          {trade.amount && trade.amount >= 1000000 ? 
+                            `${(trade.amount / 1000000).toFixed(2)}M` :
+                            trade.amount && trade.amount >= 1000 ? 
+                            `${(trade.amount / 1000).toFixed(2)}K` :
+                            trade.amount ? trade.amount.toFixed(2) : '0'
+                          }
+                        </span>
+                        <span className="text-white/60 text-sm">
+                          {selectedToken?.symbol || 'TOKEN'}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-white/80 text-sm font-mono">
+                          ${trade.priceUsd ? trade.priceUsd.toFixed(4) : '0.0000'}
+                        </div>
+                        <div className="text-white/40 text-xs">
+                          {trade.blockUnixTime ? new Date(trade.blockUnixTime * 1000).toLocaleTimeString() : 'Unknown'}
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+          </div>
+        </div>
+
     </div>
   );
 });

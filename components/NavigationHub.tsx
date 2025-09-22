@@ -3,10 +3,20 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import PureVisualRetrocausality, { PureVisualRetrocausalityRef } from "./PureVisualRetrocausality";
 import axios from 'axios';
+import { QuantumForecastService, MarketInsights, QuantumForecast } from '../utils/quantumForecastService';
 
 interface NavigationHubProps {
   isOpen: boolean;
   onClose: () => void;
+}
+
+interface JupiterData {
+  marketCap: number;
+  price: number;
+  volume24h: number;
+  liquidity: number;
+  priceChange24h: number;
+  priceChangePercent24h: number;
 }
 
 interface SearchToken {
@@ -44,6 +54,16 @@ interface SearchToken {
   cexes?: string[];
   tags?: string[];
   updatedAt: string;
+  // Additional fields for quantum forecast
+  devHolding?: number;
+  topHolderPercentage?: number;
+  age?: number;
+  volume5m?: number;
+  volume1h?: number;
+  volume6h?: number;
+  buyVolume?: number;
+  sellVolume?: number;
+  price?: number;
 }
 
 
@@ -67,19 +87,107 @@ export default function NavigationHub({ isOpen, onClose }: NavigationHubProps) {
   const [selectedToken, setSelectedToken] = useState<SearchToken | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
-  const [showLegend, setShowLegend] = useState(false);
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [showInvalidInput, setShowInvalidInput] = useState(false);
-  const [predictionData, setPredictionData] = useState({
+  const [predictionData, setPredictionData] = useState<QuantumForecast>({
     confidence: 0.75,
     expectedRange: { min: 5, max: 15 },
     upProbability: 0.6,
-    downProbability: 0.4
+    downProbability: 0.4,
+    momentum: {
+      priceMomentum: 'Neutral',
+      volumeMomentum: 'Stable',
+      acceleration: 'Moderate',
+      heatingCooling: 'Warm'
+    },
+    signals: [],
+    riskLevel: 'Medium',
+    timeHorizon: 'Medium'
   });
+
+  // Jupiter data for dashboard
+  const [jupiterData, setJupiterData] = useState<JupiterData | null>(null);
+  const [jupiterLoading, setJupiterLoading] = useState(false);
   
   const searchInputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const visualRef = useRef<PureVisualRetrocausalityRef>(null);
+
+  // Fetch Jupiter data for selected token
+  const fetchJupiterData = useCallback(async (tokenAddress: string) => {
+    if (!tokenAddress) return;
+    
+    setJupiterLoading(true);
+    try {
+      const response = await fetch(`https://lite-api.jup.ag/tokens/v2/search?query=${tokenAddress}`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const tokenData = data[0];
+        
+        if (tokenData) {
+          const marketCap = tokenData.mcap || (tokenData.usdPrice * (tokenData.totalSupply || 1000000000));
+          
+          // Calculate additional metrics for quantum forecast
+          const volume24h = tokenData.volume24h || 0;
+          const liquidity = tokenData.liquidity || 0;
+          const priceChange24h = tokenData.priceChange24h || 0;
+          const priceChangePercent24h = tokenData.priceChangePercent24h || 0;
+          
+          // Calculate age in hours if available
+          let age: number | undefined;
+          if (tokenData.firstPool?.createdAt) {
+            const createdAt = new Date(tokenData.firstPool.createdAt);
+            const now = new Date();
+            age = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60); // hours
+          }
+          
+          setJupiterData({
+            marketCap,
+            price: tokenData.usdPrice || 0,
+            volume24h,
+            liquidity,
+            priceChange24h,
+            priceChangePercent24h
+          });
+          
+          // Update the selected token with additional data for quantum forecast
+          if (selectedToken) {
+            const updatedToken = {
+              ...selectedToken,
+              holderCount: tokenData.holderCount,
+              devHolding: tokenData.devHolding,
+              topHolderPercentage: tokenData.topHolderPercentage,
+              age,
+              volume5m: tokenData.stats5m?.volume,
+              volume1h: tokenData.stats1h?.volume,
+              volume6h: tokenData.stats6h?.volume,
+              buyVolume: tokenData.stats24h?.buyVolume,
+              sellVolume: tokenData.stats24h?.sellVolume,
+              price: tokenData.usdPrice
+            };
+            setSelectedToken(updatedToken);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching Jupiter data:', error);
+    } finally {
+      setJupiterLoading(false);
+    }
+  }, [selectedToken]);
+
+  // Fetch Jupiter data when token is selected
+  useEffect(() => {
+    if (selectedToken?.id) {
+      fetchJupiterData(selectedToken.id);
+    } else {
+      setJupiterData(null);
+    }
+  }, [selectedToken?.id, fetchJupiterData]);
 
   // Jupiter search function
   const searchTokens = async (searchQuery: string) => {
@@ -166,20 +274,81 @@ export default function NavigationHub({ isOpen, onClose }: NavigationHubProps) {
   };
 
   const handleTokenSelect = (token: SearchToken) => {
+    // Clear previous selection and reset all related data
+    setSelectedToken(null);
+    setJupiterData(null);
+    setPredictionData({
+      confidence: 0,
+      expectedRange: { min: 0, max: 0 },
+      upProbability: 0,
+      downProbability: 0,
+      momentum: {
+        priceMomentum: 'Neutral',
+        volumeMomentum: 'Stable',
+        acceleration: 'Moderate',
+        heatingCooling: 'Warm'
+      },
+      signals: [],
+      riskLevel: 'Medium',
+      timeHorizon: 'Medium'
+    });
+    
+    // Set new token and clear search results
     setSelectedToken(token);
     setSearchQuery(token.symbol);
     setSearchResults([]);
     setIsAnalyzing(true);
     
-    // Update prediction data based on selected token
+    // Fetch fresh Jupiter data for the new token
+    fetchJupiterData(token.id);
+    
+    // Calculate quantum forecast based on market insights
     setTimeout(() => {
+      if (jupiterData) {
+        const marketInsights: MarketInsights = {
+          marketCap: jupiterData.marketCap,
+          price: jupiterData.price,
+          volume24h: jupiterData.volume24h,
+          liquidity: jupiterData.liquidity,
+          priceChange24h: jupiterData.priceChange24h,
+          priceChangePercent24h: jupiterData.priceChangePercent24h,
+          // Additional data from Jupiter API if available
+          holderCount: token.holderCount,
+          devHolding: token.devHolding,
+          topHolderPercentage: token.topHolderPercentage,
+          age: token.age,
+          volume5m: token.volume5m,
+          volume1h: token.volume1h,
+          volume6h: token.volume6h,
+          buyVolume: token.buyVolume,
+          sellVolume: token.sellVolume
+        };
+        
+        const forecast = QuantumForecastService.calculateForecast(marketInsights);
+        setPredictionData(forecast);
+      } else {
+        // Fallback to basic calculation if Jupiter data not available
+        const fallbackPrice = token.price || token.usdPrice || 0;
+        setPredictionData({
+          confidence: 0.5,
+          expectedRange: { 
+            min: fallbackPrice > 0 ? fallbackPrice * 0.8 : 0, 
+            max: fallbackPrice > 0 ? fallbackPrice * 1.2 : 0 
+          },
+          upProbability: 0.5,
+          downProbability: 0.5,
+          momentum: {
+            priceMomentum: 'Neutral',
+            volumeMomentum: 'Stable',
+            acceleration: 'Moderate',
+            heatingCooling: 'Warm'
+          },
+          signals: [],
+          riskLevel: 'Medium',
+          timeHorizon: 'Medium'
+        });
+      }
       setIsAnalyzing(false);
-      setPredictionData({
-        confidence: 0.6 + Math.random() * 0.3,
-        expectedRange: { min: 3 + Math.random() * 10, max: 10 + Math.random() * 20 },
-        upProbability: 0.3 + Math.random() * 0.4,
-        downProbability: 0.3 + Math.random() * 0.4
-      });
     }, 1500);
   };
 
@@ -267,11 +436,11 @@ export default function NavigationHub({ isOpen, onClose }: NavigationHubProps) {
                     value={searchQuery}
                     onChange={handleSearchChange}
                     placeholder="Search tokens by symbol, name, or mint address..."
-                    className="w-80 px-3 pr-10 py-2 bg-white/5 border border-white/10 rounded-full text-white placeholder-white/50 focus:outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400/50 transition-all duration-200 text-sm"
+                    className="w-80 px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-white/40 focus:bg-white/15 transition-all duration-200"
                   />
                   <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                     {isSearching ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-teal-400 border-t-transparent"></div>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b border-white/60"></div>
                     ) : searchQuery ? (
                       <button
                         type="button"
@@ -432,7 +601,7 @@ export default function NavigationHub({ isOpen, onClose }: NavigationHubProps) {
           </motion.div>
         )}
 
-        {/* Metrics Bands */}
+        {/* Metrics Bands - Always visible */}
         <motion.div 
           className="px-4 lg:px-6 py-4 border-b border-white/10 bg-black"
           initial={{ opacity: 0, y: 20 }}
@@ -446,19 +615,59 @@ export default function NavigationHub({ isOpen, onClose }: NavigationHubProps) {
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-transparent border border-white/10 rounded-lg p-3">
                   <div className="text-sm text-white/60 mb-1">Market Cap</div>
-                  <div className="text-lg font-bold text-green-300">$2.4M</div>
+                  <div className="text-lg font-bold text-green-300">
+                    {selectedToken && jupiterData ? (
+                      jupiterData.marketCap >= 1000000 ? 
+                        `$${(jupiterData.marketCap / 1000000).toFixed(1)}M` :
+                        jupiterData.marketCap >= 1000 ? 
+                        `$${(jupiterData.marketCap / 1000).toFixed(1)}K` :
+                        `$${jupiterData.marketCap.toFixed(0)}`
+                    ) : (
+                      '-'
+                    )}
+                  </div>
                 </div>
                 <div className="bg-transparent border border-white/10 rounded-lg p-3">
                   <div className="text-sm text-white/60 mb-1">Liquidity</div>
-                  <div className="text-lg font-bold text-blue-300">$180K</div>
+                  <div className="text-lg font-bold text-blue-300">
+                    {selectedToken && jupiterData ? (
+                      jupiterData.liquidity >= 1000000 ? 
+                        `$${(jupiterData.liquidity / 1000000).toFixed(1)}M` :
+                        jupiterData.liquidity >= 1000 ? 
+                        `$${(jupiterData.liquidity / 1000).toFixed(1)}K` :
+                        `$${jupiterData.liquidity.toFixed(0)}`
+                    ) : (
+                      '-'
+                    )}
+                  </div>
                 </div>
                 <div className="bg-transparent border border-white/10 rounded-lg p-3">
                   <div className="text-sm text-white/60 mb-1">24h Volume</div>
-                  <div className="text-lg font-bold text-purple-300">$45K</div>
+                  <div className="text-lg font-bold text-purple-300">
+                    {selectedToken && jupiterData ? (
+                      jupiterData.volume24h >= 1000000 ? 
+                        `$${(jupiterData.volume24h / 1000000).toFixed(1)}M` :
+                        jupiterData.volume24h >= 1000 ? 
+                        `$${(jupiterData.volume24h / 1000).toFixed(1)}K` :
+                        `$${jupiterData.volume24h.toFixed(0)}`
+                    ) : (
+                      '-'
+                    )}
+                  </div>
                 </div>
                 <div className="bg-transparent border border-white/10 rounded-lg p-3">
-                  <div className="text-sm text-white/60 mb-1">Volume</div>
-                  <div className="text-lg font-bold text-orange-300">$45K</div>
+                  <div className="text-sm text-white/60 mb-1">24h Change</div>
+                  <div className={`text-lg font-bold ${
+                    selectedToken && jupiterData ? (
+                      jupiterData.priceChangePercent24h >= 0 ? 'text-green-300' : 'text-red-300'
+                    ) : 'text-white/40'
+                  }`}>
+                    {selectedToken && jupiterData ? (
+                      `${jupiterData.priceChangePercent24h >= 0 ? '+' : ''}${jupiterData.priceChangePercent24h.toFixed(2)}%`
+                    ) : (
+                      '-'
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -468,22 +677,42 @@ export default function NavigationHub({ isOpen, onClose }: NavigationHubProps) {
               <h3 className="text-sm font-bold text-white tracking-wider">QUANTUM FORECAST</h3>
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-transparent border border-white/10 rounded-lg p-3">
-                  <div className="text-sm text-white/60 mb-1">10m Prediction</div>
-                  <div className="text-lg font-bold text-cyan-300">+2.3%</div>
+                  <div className="text-sm text-white/60 mb-1">Confidence</div>
+                  <div className="text-lg font-bold text-cyan-300">
+                    {selectedToken ? Math.round(predictionData.confidence * 100) : '-'}%
+                  </div>
                 </div>
                 <div className="bg-transparent border border-white/10 rounded-lg p-3">
-                  <div className="text-sm text-white/60 mb-1">1h Prediction</div>
-                  <div className="text-lg font-bold text-cyan-300">+5.7%</div>
+                  <div className="text-sm text-white/60 mb-1">Risk Level</div>
+                  <div className={`text-lg font-bold ${
+                    selectedToken ? (
+                      predictionData.riskLevel === 'Low' ? 'text-green-300' :
+                      predictionData.riskLevel === 'Medium' ? 'text-yellow-300' :
+                      predictionData.riskLevel === 'High' ? 'text-orange-300' : 'text-red-300'
+                    ) : 'text-white/40'
+                  }`}>
+                    {selectedToken ? predictionData.riskLevel : '-'}
+                  </div>
                 </div>
                 <div className="bg-transparent border border-white/10 rounded-lg p-3">
                   <div className="text-sm text-white/60 mb-1">Expected Range</div>
-                  <div className="text-lg font-bold text-yellow-300">±8%</div>
+                  <div className="text-lg font-bold text-yellow-300">
+                    {selectedToken && jupiterData && !isNaN(predictionData.expectedRange.min) && !isNaN(predictionData.expectedRange.max) ? (
+                      `$${predictionData.expectedRange.min.toFixed(6)} - $${predictionData.expectedRange.max.toFixed(6)}`
+                    ) : (
+                      '-'
+                    )}
+                  </div>
                 </div>
                 <div className="bg-transparent border border-white/10 rounded-lg p-3">
                   <div className="text-sm text-white/60 mb-1">Up Probability</div>
-                  <div className="text-lg font-bold text-green-300">60%</div>
+                  <div className="text-lg font-bold text-green-300">
+                    {selectedToken ? Math.round(predictionData.upProbability * 100) : '-'}%
+                  </div>
                 </div>
               </div>
+              
+              
             </div>
           </div>
         </motion.div>
@@ -503,15 +732,6 @@ export default function NavigationHub({ isOpen, onClose }: NavigationHubProps) {
             isSearching={isAnalyzing}
           />
           
-          {/* Legend Button - Bottom Right Corner */}
-          <div className="absolute bottom-4 right-4 z-20">
-            <button
-              onClick={() => setShowLegend(!showLegend)}
-              className="px-3 py-2 bg-black/80 hover:bg-black/90 border border-white/30 rounded-full text-white/70 hover:text-white text-sm transition-all duration-200 shadow-lg"
-            >
-              Legend
-            </button>
-          </div>
           
           {/* Zoom Controls - Bottom Left Corner */}
           <div className="absolute bottom-4 left-4 flex flex-row space-x-2 z-20">
@@ -535,56 +755,6 @@ export default function NavigationHub({ isOpen, onClose }: NavigationHubProps) {
             </button>
           </div>
           
-          {/* Legend Overlay */}
-          {showLegend && (
-            <div className="absolute bottom-12 right-4 bg-black/95 border border-white/30 rounded-lg p-5 text-white text-sm max-w-sm shadow-xl z-20">
-              <h4 className="font-bold mb-4 text-blue-300 text-base">QUANTUM FIELD LEGEND</h4>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-4 h-4 bg-red-500 rounded-full border border-white/20"></div>
-                  <div>
-                    <div className="font-semibold text-red-300">LASER</div>
-                    <div className="text-sm text-white/70">Quantum light source</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-4 h-4 bg-blue-500 rounded-full border border-white/20"></div>
-                  <div>
-                    <div className="font-semibold text-blue-300">BBO</div>
-                    <div className="text-sm text-white/70">Entanglement crystal</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-4 h-4 bg-cyan-500 rounded-full border border-white/20 transform rotate-45"></div>
-                  <div>
-                    <div className="font-semibold text-cyan-300">BS (Beam Splitters)</div>
-                    <div className="text-sm text-white/70">Split quantum signals</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-4 h-4 bg-green-500 border border-white/20 transform rotate-45"></div>
-                  <div>
-                    <div className="font-semibold text-green-300">M (Mirrors)</div>
-                    <div className="text-sm text-white/70">Reflect quantum info</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-4 h-4 bg-white rounded-full border border-white/20"></div>
-                  <div>
-                    <div className="font-semibold text-white">D (Detectors)</div>
-                    <div className="text-sm text-white/70">Measure quantum states</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-6 h-6 bg-blue-400 rounded-full border border-white/20"></div>
-                  <div>
-                    <div className="font-semibold text-blue-300">PREDICTION ENGINE</div>
-                    <div className="text-sm text-white/70">Analyzes all data</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </motion.div>
 
         {/* Help Modal */}

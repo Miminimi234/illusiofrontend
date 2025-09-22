@@ -1,6 +1,9 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useFirebaseWebSocket } from "@/hooks/useFirebaseWebSocket";
+import { getDatabase, ref, onValue, DataSnapshot } from 'firebase/database';
+import { app } from '../lib/firebase';
+import { OracleMessage } from '../hooks/useOracleChat';
 import OracleChat from "@/components/OracleChat";
 
 interface OracleHubProps {
@@ -13,6 +16,7 @@ interface ArchiveEntry {
   date: string;
   time: string;
   messageCount: number;
+  messages: OracleMessage[];
   asciiBanner?: string;
   conclusion?: string;
 }
@@ -85,6 +89,82 @@ export default function OracleHub({ isOpen, onClose }: OracleHubProps) {
   const toggleArchiveMode = () => {
     setIsArchiveMode(!isArchiveMode);
     setSearchQuery('');
+  };
+
+  // Fetch all messages from Firebase and create archive
+  const createArchiveFromAllMessages = async () => {
+    try {
+      const db = getDatabase(app);
+      const messagesRef = ref(db, 'oracle-messages');
+      
+      // Fetch all messages without limit
+      const snapshot = await new Promise<DataSnapshot>((resolve, reject) => {
+        onValue(messagesRef, (snapshot) => {
+          resolve(snapshot);
+        }, (error) => {
+          reject(error);
+        }, { onlyOnce: true });
+      });
+
+      if (snapshot.exists()) {
+        const messagesData = snapshot.val();
+        const allMessages = Object.values(messagesData) as OracleMessage[];
+        
+        // Sort by timestamp
+        allMessages.sort((a, b) => a.timestamp - b.timestamp);
+        
+        // Create archive entry
+        const archiveId = `archive-${Date.now()}`;
+        const now = new Date();
+        const date = now.toLocaleDateString();
+        const time = now.toLocaleTimeString();
+        
+        const newArchive: ArchiveEntry = {
+          id: archiveId,
+          date,
+          time,
+          messageCount: allMessages.length,
+          messages: allMessages,
+          asciiBanner: generateAsciiBanner(allMessages),
+          conclusion: generateConclusion(allMessages)
+        };
+        
+        // Save to archives
+        const updatedArchives = [...archives, newArchive];
+        setArchives(updatedArchives);
+        localStorage.setItem('oracle-archives', JSON.stringify(updatedArchives));
+        
+        console.log(`📦 Created archive with ${allMessages.length} messages`);
+        return newArchive;
+      } else {
+        console.log('No messages found to archive');
+        return null;
+      }
+    } catch (error) {
+      console.error('Error creating archive:', error);
+      throw error;
+    }
+  };
+
+  // Generate ASCII banner from messages
+  const generateAsciiBanner = (messages: OracleMessage[]) => {
+    const agentCounts = messages.reduce((acc, msg) => {
+      acc[msg.agent] = (acc[msg.agent] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    return `
+    ╔══════════════════════════════════════╗
+    ║           ORACLE ARCHIVE             ║
+    ║     ${messages.length} messages • ${Object.keys(agentCounts).length} agents    ║
+    ╚══════════════════════════════════════╝`;
+  };
+
+  // Generate conclusion from messages
+  const generateConclusion = (messages: OracleMessage[]) => {
+    const recentMessages = messages.slice(-10);
+    const topics = recentMessages.map(msg => msg.message.substring(0, 50)).join(' | ');
+    return `Recent topics: ${topics}...`;
   };
 
   const getFilteredArchives = () => {
@@ -237,17 +317,6 @@ export default function OracleHub({ isOpen, onClose }: OracleHubProps) {
                 <h2 className="text-xl font-bold text-white" style={{ fontFamily: 'VT323, monospace' }}>
                   {isArchiveMode ? 'Archive' : 'Live Chat'}
                 </h2>
-                <button 
-                  onClick={toggleArchiveMode}
-                  className={`transition-colors duration-200 text-sm px-3 py-1 border rounded ${
-                    isArchiveMode 
-                      ? 'text-white bg-white/10 border-white/40' 
-                      : 'text-white/60 hover:text-white border-white/20 hover:bg-white/5'
-                  }`} 
-                  style={{ fontFamily: 'VT323, monospace' }}
-                >
-                  {isArchiveMode ? 'Live Chat' : 'Archive'}
-                </button>
               </div>
 
               {/* Search bar - only show in archive mode */}

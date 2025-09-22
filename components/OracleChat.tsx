@@ -136,7 +136,7 @@ export default function OracleChat({ className = "" }: OracleChatProps) {
       <div className="flex-shrink-0 mb-2">
         <div className="flex items-center justify-between text-xs" style={{ fontFamily: 'VT323, monospace' }}>
           <span className="text-white/60">
-            Oracle Chat • {messages.length} messages
+            Oracle Chat
           </span>
           <span className={`px-2 py-1 rounded ${
             isConnected 

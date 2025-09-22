@@ -7,7 +7,6 @@ import { createPortal } from 'react-dom';
 import ImageWithFallback from './ImageWithFallback';
 import HoverImagePreview from './HoverImagePreview';
 import CreationTimeDisplay from './CreationTimeDisplay';
-import SearchDropdown from './SearchDropdown';
 import SocialBadges from './SocialBadges';
 import { serverChatService } from '../utils/serverChatService';
 import { simpleGrokService, ChatMessage } from '../utils/simpleGrokService';
@@ -354,14 +353,14 @@ const WatchlistPopup: React.FC<{
                     <div>
                       <div className="text-white font-semibold">
                         <span className="text-white/80 text-sm font-mono font-bold uppercase">
-                          {token.symbol || token.mint.slice(0, 4)}
+                          {token.symbol || (token.mint ? token.mint.slice(0, 4) : 'N/A')}
                         </span>
                         <span className="ml-2">
-                          {token.name || token.symbol || `${token.mint.slice(0, 4)}…${token.mint.slice(-4)}`}
+                          {token.name || token.symbol || (token.mint ? `${token.mint.slice(0, 4)}…${token.mint.slice(-4)}` : 'Unknown')}
                         </span>
                       </div>
                       <div className="text-white/60 text-sm">
-                        {token.mint.slice(0, 8)}...{token.mint.slice(-8)}
+                        {token.mint ? `${token.mint.slice(0, 8)}...${token.mint.slice(-8)}` : 'N/A'}
                       </div>
                     </div>
                   </div>
@@ -748,7 +747,7 @@ const TokenCardBase: React.FC<CardProps> = React.memo(({ token, visibleMintsRef,
             />
           ) : (
             <div className="h-full w-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold rounded-md">
-              {(token.symbol || token.name || "T").slice(0, 2).toUpperCase()}
+              {(token.symbol || token.name || "T")?.slice(0, 2).toUpperCase() || "T"}
             </div>
           )}
         </div>
@@ -761,10 +760,10 @@ const TokenCardBase: React.FC<CardProps> = React.memo(({ token, visibleMintsRef,
             <span className={`text-white/80 font-mono font-bold uppercase ${
               token.isStock ? 'text-sm' : 'text-sm'
             }`}>
-              {token.symbol || token.mint.slice(0, 4)}
+              {token.symbol || (token.mint ? token.mint.slice(0, 4) : 'N/A')}
             </span>
             <span className={token.isStock ? 'text-sm' : 'text-sm'}>
-              {token.name || token.symbol || `${token.mint.slice(0, 4)}…${token.mint.slice(-4)}`}
+              {token.name || token.symbol || (token.mint ? `${token.mint.slice(0, 4)}…${token.mint.slice(-4)}` : 'Unknown')}
             </span>
             {/* Copy button */}
             <button
@@ -873,29 +872,58 @@ const TokenCardBase: React.FC<CardProps> = React.memo(({ token, visibleMintsRef,
         <div className="min-w-0 flex items-center">
           <span className="text-white/60">MC:</span>
           <span className={`ml-1 font-mono font-semibold ${
-            token.is_on_curve 
-              ? 'text-white' 
-              : (token.marketCap !== undefined && token.marketCap !== null
+            token.marketCap !== undefined && token.marketCap !== null
                   ? (token.marketCap > 30000 
                       ? 'text-yellow-400' 
                       : token.marketCap > 0
                         ? 'text-green-400'
                         : 'text-gray-400')
-                  : 'text-white')
+              : 'text-white'
           }`}>
-            {token.is_on_curve ? '— (on curve)' : (token.marketCap !== undefined && token.marketCap !== null ? `$${formatNumber(token.marketCap)}` : '—')}
+            {token.marketCap !== undefined && token.marketCap !== null ? `$${formatNumber(token.marketCap)}` : '—'}
           </span>
         </div>
         <div className="min-w-0 flex items-center">
           <span className="text-white/60">Vol:</span>
           <span className="text-white ml-1 font-mono">
-            {token.is_on_curve ? '— (on curve)' : (token.volume24h !== undefined && token.volume24h !== null ? `$${formatNumber(token.volume24h)}` : '—')}
+            {(() => {
+              // Check multiple volume field names from Firebase
+              let volume = token.volume24h || token.volume_24h || token.volume || 0;
+              
+              // If no direct volume field, calculate from stats24h
+              if (!volume && token.stats24h) {
+                const buyVolume = token.stats24h.buyVolume || 0;
+                const sellVolume = token.stats24h.sellVolume || 0;
+                volume = buyVolume + sellVolume;
+              }
+              
+              // Debug: Log volume fields for first few tokens
+              if (token.mint && Math.random() < 0.1) { // Only log 10% of tokens to avoid spam
+                console.log('🔍 Volume fields for token:', {
+                  mint: token.mint,
+                  name: token.name,
+                  volume24h: token.volume24h,
+                  volume_24h: token.volume_24h,
+                  volume: token.volume,
+                  stats24h: token.stats24h,
+                  buyVolume: token.stats24h?.buyVolume,
+                  sellVolume: token.stats24h?.sellVolume,
+                  calculatedVolume: volume,
+                  allKeys: Object.keys(token).filter(key => key.toLowerCase().includes('volume'))
+                });
+              }
+              
+              if (volume !== undefined && volume !== null && volume > 0) {
+                return `$${formatNumber(volume)}`;
+              }
+              return '—';
+            })()}
           </span>
         </div>
         <div className="min-w-0 flex items-center">
           <span className="text-white/60">LP:</span>
           <span className="text-white ml-1 font-mono">
-            {token.is_on_curve ? '— (on curve)' : (token.liquidity !== undefined && token.liquidity !== null ? `$${formatNumber(token.liquidity)}` : '—')}
+            {token.liquidity !== undefined && token.liquidity !== null ? `$${formatNumber(token.liquidity)}` : '—'}
           </span>
         </div>
       </div>
@@ -1041,18 +1069,10 @@ const TokenCardBase: React.FC<CardProps> = React.memo(({ token, visibleMintsRef,
         
         {/* Contract Address - positioned on the far right */}
         <span className="text-sm text-white/30 font-mono">
-          {token.mint.slice(0, 4)}...{token.mint.slice(-4)}
+          {token.mint ? `${token.mint.slice(0, 4)}...${token.mint.slice(-4)}` : 'N/A'}
         </span>
       </div>
       
-      {/* Bonding Curve Badge */}
-      {(token.is_on_curve || token.status === 'curve') && (
-        <div className="mt-2 flex justify-center">
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-sm font-medium bg-gradient-to-r from-purple-500 to-pink-500 text-white">
-            BONDING CURVE
-          </span>
-        </div>
-      )}
       
       {/* Stock-specific information */}
       {token.stockInfo && (
@@ -1084,11 +1104,10 @@ const shallowPickEq = (a: any, b: any) =>
   a.name === b.name &&
   a.symbol === b.symbol &&
   a.imageUrl === b.imageUrl &&
-  a.is_on_curve === b.is_on_curve &&
   a.price === b.price &&
   a.marketCap === b.marketCap &&
   a.liquidity === b.liquidity &&
-  a.volume24h === b.volume24h &&
+  (a.volume24h === b.volume24h || a.volume_24h === b.volume_24h || a.volume === b.volume) &&
   JSON.stringify(a.links) === JSON.stringify(a.links);
 
 export const TokenCard = React.memo(TokenCardBase, (prev, next) =>
@@ -1663,6 +1682,15 @@ function InsightsColumn({
   // Fetch Jupiter market data when focusToken changes
   useEffect(() => {
     if (focusToken && focusToken.mint) {
+      // Check if this is a search result - if so, ignore existing Jupiter data and fetch fresh
+      if (focusToken._isSearchResult) {
+        console.log('🔍 Search result detected - fetching fresh Jupiter data for insights');
+        // Remove the search result flag and fetch fresh data
+        const cleanToken = { ...focusToken };
+        delete cleanToken._isSearchResult;
+        setFocusToken(cleanToken);
+      }
+      
       fetchJupiterMarketData(focusToken.mint, true).then((socialData) => {
         if (socialData) {
           setFocusToken((prev: any | null) => ({
@@ -2138,10 +2166,17 @@ function InsightsColumn({
                       src={focusToken.imageUrl}
                       alt={focusToken.symbol || focusToken.name || "Token"}
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        console.log('🖼️ Image failed to load:', focusToken.imageUrl);
+                        e.currentTarget.style.display = 'none';
+                      }}
+                      onLoad={() => {
+                        console.log('🖼️ Image loaded successfully:', focusToken.imageUrl);
+                      }}
                     />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold">
-                      {(focusToken.symbol || focusToken.name || "T").slice(0, 2).toUpperCase()}
+                      {(focusToken.symbol || focusToken.name || "T")?.slice(0, 2).toUpperCase() || "T"}
                     </div>
                   )}
                 </div>
@@ -2150,19 +2185,19 @@ function InsightsColumn({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-white/80 text-sm font-mono font-bold uppercase">
-                      {focusToken.symbol || focusToken.mint.slice(0, 4)}
+                      {focusToken.symbol || (focusToken.mint ? focusToken.mint.slice(0, 4) : 'N/A')}
                     </span>
                     <span className="text-white text-sm font-medium truncate">
-                      {focusToken.name || focusToken.symbol || `${focusToken.mint.slice(0, 4)}…${focusToken.mint.slice(-4)}`}
+                      {focusToken.name || focusToken.symbol || (focusToken.mint ? `${focusToken.mint.slice(0, 4)}…${focusToken.mint.slice(-4)}` : 'Unknown')}
                     </span>
                   </div>
                   <div className="text-white/50 text-sm font-mono">
-                    {focusToken.mint.slice(0, 8)}...{focusToken.mint.slice(-8)}
+                    {focusToken.mint ? `${focusToken.mint.slice(0, 8)}...${focusToken.mint.slice(-8)}` : 'N/A'}
                   </div>
-                </div>
-                
-                {/* Social Links */}
-                {(focusToken.website || focusToken.twitter || focusToken.telegram || focusToken.source) && (
+                  </div>
+                  
+                  {/* Social Links */}
+                  {(focusToken.website || focusToken.twitter || focusToken.telegram || focusToken.source) && (
                   <div className="flex items-center gap-2">
                     <SocialBadges 
                       links={{
@@ -2176,7 +2211,7 @@ function InsightsColumn({
                       source={focusToken.source}
                     />
                   </div>
-                )}
+                  )}
               </div>
             </div>
 
@@ -2220,8 +2255,7 @@ function InsightsColumn({
                           <span className="font-semibold">
                             {jupiterData ? 
                               `$${formatMarketcap(jupiterData.marketCap)}` : 
-                              (focusToken.is_on_curve ? '— (on curve)' : 
-                               (focusToken.marketCap && focusToken.marketCap !== 'null' && focusToken.marketCap !== '0' ? `$${formatMarketcap(parseFloat(focusToken.marketCap))}` : '—'))
+                              (focusToken.marketCap && focusToken.marketCap !== 'null' && focusToken.marketCap !== '0' ? `$${formatMarketcap(parseFloat(focusToken.marketCap))}` : '—')
                             }
                           </span>
                           {jupiterRefreshing && (
@@ -2244,7 +2278,7 @@ function InsightsColumn({
                           <span className="font-semibold">
                             {jupiterData ? 
                               `$${jupiterData.liquidity.toLocaleString()}` : 
-                              (metrics?.liquidity || "N/A")
+                              (focusToken.liquidity ? `$${formatMarketcap(focusToken.liquidity)}` : "N/A")
                             }
                           </span>
                           {jupiterRefreshing && (
@@ -2269,7 +2303,7 @@ function InsightsColumn({
                           <span className="font-semibold">
                             {jupiterData ? 
                               jupiterData.holderCount.toLocaleString() : 
-                              (holderCount !== null ? holderCount.toLocaleString() : "N/A")
+                              (focusToken.holderCount ? focusToken.holderCount.toLocaleString() : "N/A")
                             }
                           </span>
                           {jupiterRefreshing && (
@@ -2290,21 +2324,23 @@ function InsightsColumn({
                         <span className="text-yellow-400 font-semibold">
                           {jupiterData && jupiterData.topHoldersPercentage && jupiterData.topHoldersPercentage > 0 
                             ? `${jupiterData.topHoldersPercentage.toFixed(1)}%`
-                            : 'N/A'
+                            : (focusToken.audit?.topHoldersPercentage ? `${focusToken.audit.topHoldersPercentage.toFixed(1)}%` : 'N/A')
                           }
                         </span>
                       </span>
                       <span className="flex items-center space-x-2">
                         <span>Dev:</span>
-                        <span className={`font-semibold ${jupiterData && jupiterData.devHoldingPercentage && jupiterData.devHoldingPercentage > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        <span className={`font-semibold ${(jupiterData && jupiterData.devHoldingPercentage && jupiterData.devHoldingPercentage > 0) || (focusToken.audit?.devBalancePercentage && focusToken.audit.devBalancePercentage > 0) ? 'text-green-400' : 'text-red-400'}`}>
                           {jupiterData && jupiterData.devHoldingPercentage && jupiterData.devHoldingPercentage > 0 
                             ? `${jupiterData.devHoldingPercentage.toFixed(1)}%`
-                            : 'sold'
+                            : (focusToken.audit?.devBalancePercentage && focusToken.audit.devBalancePercentage > 0 
+                                ? `${focusToken.audit.devBalancePercentage.toFixed(1)}%`
+                                : 'sold')
                           }
                         </span>
-                        {jupiterData && (
+                        {(jupiterData || focusToken.totalSupply) && (
                           <span className="text-white/50 text-sm ml-1">
-                            ({formatSupply(jupiterData.totalSupply || 0)})
+                            ({formatSupply(jupiterData?.totalSupply || focusToken.totalSupply || 0)})
                           </span>
                         )}
                       </span>
@@ -2324,7 +2360,7 @@ function InsightsColumn({
                           <span className="font-semibold">
                             {jupiterData && jupiterData.usdPrice ? 
                               `$${jupiterData.usdPrice.toFixed(8)}` : 
-                              (focusToken.price ? `$${parseFloat(focusToken.price).toFixed(8)}` : 'N/A')
+                              (focusToken.usdPrice ? `$${parseFloat(focusToken.usdPrice).toFixed(8)}` : 'N/A')
                             }
                           </span>
                           {jupiterRefreshing && (
@@ -2362,9 +2398,24 @@ function InsightsColumn({
                             <span className="text-sm font-semibold">${jupiterData.volume.total.toLocaleString()}</span>
                           </div>
                         </div>
+                      ) : focusToken.stats24h ? (
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-green-400 text-sm">Buy:</span>
+                            <span className="text-sm font-semibold">${(focusToken.stats24h.buyVolume || 0).toLocaleString()}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-red-400 text-sm">Sell:</span>
+                            <span className="text-sm font-semibold">${(focusToken.stats24h.sellVolume || 0).toLocaleString()}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-white/60 border-t border-white/10 pt-1">
+                            <span className="text-sm">Total:</span>
+                            <span className="text-sm font-semibold">${((focusToken.stats24h.buyVolume || 0) + (focusToken.stats24h.sellVolume || 0)).toLocaleString()}</span>
+                          </div>
+                        </div>
                       ) : (
                         <span className="text-sm">
-                          {focusToken.is_on_curve ? '— (on curve)' : '—'}
+                          —
                         </span>
                       )}
                     </div>
@@ -2607,6 +2658,131 @@ export const Scope = ({
 
   // AI Agents state
   const [hoveredAgent, setHoveredAgent] = useState<any>(null);
+  
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  
+  // Convert Jupiter search result to display format (with Jupiter data for cards)
+  const convertJupiterToToken = (jupiterToken: any) => {
+    return {
+      // Basic info
+      mint: jupiterToken.id,
+      address: jupiterToken.id,
+      name: jupiterToken.name,
+      symbol: jupiterToken.symbol,
+      imageUrl: jupiterToken.icon, // IPFS image
+      decimals: jupiterToken.decimals,
+      dev: jupiterToken.dev,
+      
+      // Supply info
+      circSupply: jupiterToken.circSupply || 0,
+      totalSupply: jupiterToken.totalSupply || 0,
+      
+      // Pool info
+      firstPoolId: jupiterToken.firstPool?.id,
+      firstPoolCreatedAt: jupiterToken.firstPool?.createdAt,
+      graduatedPool: jupiterToken.graduatedPool,
+      graduatedAt: jupiterToken.graduatedAt,
+      runnerDate: jupiterToken.runnerDate,
+      
+      // Holder info
+      holderCount: jupiterToken.holderCount || 0,
+      
+      // Audit info
+      audit: jupiterToken.audit,
+      
+      // Market data - for display in cards
+      fdv: jupiterToken.fdv || 0,
+      mcap: jupiterToken.mcap || 0,
+      marketCap: jupiterToken.mcap || 0,
+      usdPrice: jupiterToken.usdPrice || 0,
+      price: jupiterToken.usdPrice || 0,
+      priceBlockId: jupiterToken.priceBlockId || 0,
+      liquidity: jupiterToken.liquidity || 0,
+      
+      // Volume - for display in cards
+      volume24h: jupiterToken.stats24h ? (jupiterToken.stats24h.buyVolume || 0) + (jupiterToken.stats24h.sellVolume || 0) : 0,
+      volume_24h: jupiterToken.stats24h ? (jupiterToken.stats24h.buyVolume || 0) + (jupiterToken.stats24h.sellVolume || 0) : 0,
+      
+      // Stats - for display in cards
+      stats5m: jupiterToken.stats5m,
+      stats1h: jupiterToken.stats1h,
+      stats6h: jupiterToken.stats6h,
+      stats24h: jupiterToken.stats24h,
+      
+      // Social links - for display in cards
+      website: jupiterToken.website,
+      twitter: jupiterToken.twitter,
+      telegram: jupiterToken.telegram,
+      source: jupiterToken.launchpad,
+      
+      // Bonding curve
+      bondingCurve: jupiterToken.bondingCurve,
+      
+      // Timestamps
+      createdAt: jupiterToken.firstPool?.createdAt || new Date().toISOString(),
+      created_at: jupiterToken.firstPool?.createdAt || new Date().toISOString(),
+      updatedAt: jupiterToken.updatedAt,
+      
+      // Status
+      is_on_curve: jupiterToken.bondingCurve > 0,
+      status: jupiterToken.bondingCurve > 0 ? 'curve' : 'active',
+      
+      // Organic score
+      organicScore: jupiterToken.organicScore,
+      organicScoreLabel: jupiterToken.organicScoreLabel,
+      tags: jupiterToken.tags,
+      
+      // Flag to indicate this is from search - insights will ignore Jupiter data
+      _isSearchResult: true
+    };
+  };
+
+  // Search function
+  const searchTokens = async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const response = await fetch(`https://lite-api.jup.ag/tokens/v2/search?query=${query}`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setSearchResults(data || []);
+        setShowSearchResults(true);
+      } else {
+        setSearchResults([]);
+        setShowSearchResults(false);
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+      setSearchResults([]);
+      setShowSearchResults(false);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+  
+  // Handle search input change with debounce
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      searchTokens(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
+  
+  
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -3372,144 +3548,32 @@ export const Scope = ({
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
             >
-              <SearchDropdown 
-                onTokenSelect={(token) => {
-                  // Search token selected
-                  
-                  // Convert the search token to the format expected by SCOPE (TokenData interface)
-                  const scopeToken = {
-                    // Basic token info
-                    address: token.id, // Using id as address
-                    mint: token.id, // Primary identifier
-                    name: token.name,
-                    symbol: token.symbol,
-                    imageUrl: token.icon, // Fixed field name
-                    decimals: token.decimals,
-                    dev: token.dev || 'unknown',
-                    circSupply: token.circSupply || 0,
-                    totalSupply: token.totalSupply || 0,
-                    tokenProgram: token.tokenProgram || 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
-                    launchpad: token.launchpad,
-                    metaLaunchpad: token.launchpad,
-                    partnerConfig: token.partnerConfig,
-                    
-                    // Pool info
-                    firstPoolId: token.firstPool?.id,
-                    firstPoolCreatedAt: token.firstPool?.createdAt || new Date().toISOString(),
-                    
-                    // Holder info
-                    holderCount: token.holderCount || 0,
-                    
-                    // Audit info
-                    audit: token.audit || {
-                      isSus: false,
-                      mintAuthorityDisabled: false,
-                      freezeAuthorityDisabled: false,
-                      devBalancePercentage: 0,
-                      topHoldersPercentage: 0,
-                      devMigrations: 0,
-                      blockaidHoneypot: false,
-                      blockaidRugpull: false
-                    },
-                    
-                    // Organic score
-                    organicScore: token.organicScore || 0,
-                    organicScoreLabel: token.organicScoreLabel || 'Unknown',
-                    tags: token.tags || [],
-                    
-                    // Verification
-                    isVerified: token.isVerified || false,
-                    cexes: token.cexes || [],
-                    
-                    // Market data
-                    fdv: token.fdv,
-                    mcap: token.mcap,
-                    marketCap: token.mcap, // Add this for insights compatibility
-                    usdPrice: token.usdPrice,
-                    price: token.usdPrice, // Add this for insights compatibility
-                    priceBlockId: token.priceBlockId,
-                    liquidity: token.liquidity,
-                    
-                    // Stats
-                    stats5m: token.stats5m,
-                    stats1h: token.stats1h,
-                    stats6h: token.stats6h,
-                    stats24h: token.stats24h,
-                    volume24h: token.stats24h?.volume, // Add this for insights compatibility
-                    
-                    // Timestamps
-                    createdAt: new Date().toISOString(), // Fixed field name
-                    created_at: new Date().toISOString(), // Add this for insights compatibility
-                    updatedAt: token.updatedAt || new Date().toISOString(),
-                    
-                    // Status fields for insights compatibility
-                    is_on_curve: false, // Search tokens are typically not on curve
-                    status: 'active' // Set as active by default
-                  };
-                  
-                  // Token converted for scope display
-                  console.log({
-                    marketCap: scopeToken.marketCap,
-                    price: scopeToken.price,
-                    volume24h: scopeToken.volume24h,
-                    imageUrl: scopeToken.imageUrl,
-                    symbol: scopeToken.symbol,
-                    name: scopeToken.name
-                  });
-                  // Token timestamp validation
-                  console.log({
-                    createdAt: scopeToken.createdAt,
-                    now: new Date().toISOString(),
-                    parsedTime: new Date(scopeToken.createdAt).getTime(),
-                    currentTime: Date.now()
-                  });
-                  
-                  // REPLACE ALL TOKENS with just the searched token
-                  if (onAddToken) {
-                    // Replacing all tokens with search result
-                    onAddToken(scopeToken);
-                    
-                    // Add a small delay to let the token be replaced, then log the result
-                    setTimeout(() => {
-                      // Tokens replaced successfully
-                    }, 100);
-                  } else {
-                    // Add token callback not available
-                  }
-                  
-                  // Focus on the selected token
-                  setFocusToken(scopeToken);
-                  
-                  // Scroll to the token
-                  const tokenElement = document.querySelector(`[data-mint="${token.id}"]`);
-                  if (tokenElement) {
-                    tokenElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                  }
-                }}
-                className="w-full"
-              />
-              
-              {/* RED RESET BUTTON - Only show in search mode, next to search input */}
-              <AnimatePresence>
-                {isSearchMode && onResetTokens && (
-                  <motion.button
-                  onClick={() => {
-                    console.log('🔴 RESET BUTTON CLICKED');
-                    onResetTokens();
-                  }}
-                  className="ml-2 px-3 py-2 bg-red-500/20 hover:bg-red-500/40 text-red-400 hover:text-red-300 rounded-lg border border-red-500/40 hover:border-red-400 transition-all duration-200 animate-pulse flex-shrink-0 font-medium text-sm"
-                  title="Reset to original tokens"
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0, opacity: 0 }}
-                  transition={{ duration: 0.3 }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  Reset
-                  </motion.button>
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search tokens by name, symbol, or address..."
+                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-white/40 focus:bg-white/15 transition-all duration-200"
+                />
+                {isSearching && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b border-white/60"></div>
+                  </div>
                 )}
-              </AnimatePresence>
+              </div>
+              {searchQuery && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSearchResults([]);
+                    setShowSearchResults(false);
+                  }}
+                  className="px-3 py-2 bg-red-500/20 hover:bg-red-500/40 text-red-400 hover:text-red-300 rounded-lg border border-red-500/40 hover:border-red-400 transition-all duration-200 text-sm"
+                >
+                  Clear
+                </button>
+              )}
             </motion.div>
           </div>
         
@@ -3573,11 +3637,12 @@ export const Scope = ({
         ) : (
           <div className="flex flex-col border border-neutral-800/60 rounded-lg overflow-hidden">
 
+
             {/* Shared Header Row */}
             <div className="flex border-b border-neutral-800/60">
               <div className="flex-1 text-center py-4 border-r border-neutral-800/60 relative">
                 <h2 className="text-lg font-bold uppercase tracking-wider text-white">
-                  {isSearchMode ? 'Search Result' : (assetType === 'stocks' ? 'Stocks' : assetType === 'news' ? 'News' : 'Fresh Mints')}
+                  {showSearchResults ? 'Search Results' : (isSearchMode ? 'Search Result' : (assetType === 'stocks' ? 'Stocks' : assetType === 'news' ? 'News' : 'Fresh Mints'))}
                 </h2>
                 
                 {/* Search mode indicator */}
@@ -3688,21 +3753,20 @@ export const Scope = ({
             {/* Content Row */}
             <div className="flex">
               <TokenColumn 
-                title="" 
-                items={filteredTokens.newPairs} 
+                title={showSearchResults ? "SEARCH RESULTS" : "FRESH MINTS"} 
+                items={showSearchResults ? searchResults.map(convertJupiterToToken) : filteredTokens.newPairs} 
                 className="border-r border-neutral-800/60 flex-1 min-w-0"
-                  visibleMintsRef={visibleMintsRef}
-                  agents={agents}
-                  newTokenMint={newTokenMint}
-                  attachedCompanion={attachedCompanion}
-                  onCompanionDetach={handleCompanionDetach}
-                  onHoverEnter={pauseLiveOnHover}
-                  onHoverLeave={resumeLiveAfterHover}
-                  onFocusToken={setFocusToken}
-                  onDragTargetChange={setDragTargetToken}
-                  filters={filters}
-                  draggedAgent={draggedAgent}
-                  onCompanionAttached={(companionName, token) => {
+                visibleMintsRef={visibleMintsRef}
+                agents={agents}
+                newTokenMint={newTokenMint}
+                attachedCompanion={attachedCompanion}
+                onCompanionDetach={handleCompanionDetach}
+                onHoverEnter={pauseLiveOnHover}
+                onHoverLeave={resumeLiveAfterHover}
+                onFocusToken={setFocusToken}
+                onDragTargetChange={setDragTargetToken}
+                filters={filters}
+                onCompanionAttached={(companionName, token) => {
                     // Handle companion attachment
                     handleCompanionAttached(companionName, token);
                     
@@ -3759,6 +3823,7 @@ export const Scope = ({
                       }, analysisTime);
                     }, 500);
                   }}
+                  draggedAgent={draggedAgent}
                 />
                 <InsightsColumn 
                   focusToken={focusToken}
@@ -3794,7 +3859,7 @@ export const Scope = ({
                           />
                         ) : (
                           <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold">
-                            {(dragTargetToken.symbol || dragTargetToken.name || "T").slice(0, 2).toUpperCase()}
+                            {(dragTargetToken.symbol || dragTargetToken.name || "T")?.slice(0, 2).toUpperCase() || "T"}
                           </div>
                         )}
                       </div>
@@ -3813,7 +3878,7 @@ export const Scope = ({
                             ? 'text-[#a95109]'
                             : 'text-blue-300'
                         }`}>
-                          {dragTargetToken.mint.slice(0, 6)}...{dragTargetToken.mint.slice(-6)}
+                          {dragTargetToken.mint ? `${dragTargetToken.mint.slice(0, 6)}...${dragTargetToken.mint.slice(-6)}` : 'N/A'}
                         </div>
                       </div>
                       <div className={`text-sm font-medium ${
@@ -3858,7 +3923,7 @@ export const Scope = ({
                             />
                           ) : (
                             <div className="w-full h-full bg-gradient-to-br from-green-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold">
-                              {(token.symbol || token.name || "T").slice(0, 2).toUpperCase()}
+                              {(token.symbol || token.name || "T")?.slice(0, 2).toUpperCase() || "T"}
                             </div>
                           )}
                         </div>
@@ -3867,7 +3932,7 @@ export const Scope = ({
                             {token.name || token.symbol || 'Token'}
                           </div>
                           <div className={`${companionColors.text} text-sm truncate`}>
-                            {attachedCompanion.name} • {token.mint.slice(0, 6)}...{token.mint.slice(-6)}
+                            {attachedCompanion.name} • {token.mint ? `${token.mint.slice(0, 6)}...${token.mint.slice(-6)}` : 'N/A'}
                           </div>
                         </div>
                         <button

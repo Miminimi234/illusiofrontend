@@ -1,6 +1,5 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 
 interface RadialVideoButtonsProps {
   isNavigationHubOpen: boolean;
@@ -14,7 +13,6 @@ interface RadialVideoButtonsProps {
 }
 
 export default function RadialVideoButtons({ isNavigationHubOpen, setIsNavigationHubOpen, isScopeOpen, setIsScopeOpen, isOracleHubOpen, setIsOracleHubOpen, isManifestoOpen, setIsManifestoOpen }: RadialVideoButtonsProps) {
-  const router = useRouter();
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const [isHovering, setIsHovering] = useState(false);
   const [hoveredButton, setHoveredButton] = useState<string | null>(null);
@@ -44,16 +42,10 @@ export default function RadialVideoButtons({ isNavigationHubOpen, setIsNavigatio
   };
 
   const BUTTONS = [
-    { pos: "navigation", color: "#FF6B6B", alt: "Navigation", onClick: () => router.push('/navigation'), video: "/1.webm", type: "webm" },
-    { pos: "oracle", color: "#96CEB4", alt: "Oracle", onClick: () => router.push('/oracle'), video: "/4.webm", type: "webm" },
-    { pos: "scope", color: "#45B7D1", alt: "Scope", onClick: () => {
-      try {
-        router.push('/scope');
-      } catch (error) {
-        console.error("Error in scope button click handler:", error);
-      }
-    }, video: "/3.webm", type: "webm" },
-    { pos: "manifesto", color: "#4ECDC4", alt: "Manifesto", onClick: () => router.push('/manifesto'), video: "/2.webm", type: "webm" },
+    { pos: "navigation", color: "#FF6B6B", alt: "Navigation", onClick: () => setIsNavigationHubOpen(true), video: "/1.webm", type: "webm" },
+    { pos: "oracle", color: "#96CEB4", alt: "Oracle", onClick: () => setIsOracleHubOpen(true), video: "/4.webm", type: "webm" },
+    { pos: "scope", color: "#45B7D1", alt: "Scope", onClick: () => setIsScopeOpen(true), video: "/3.webm", type: "webm" },
+    { pos: "manifesto", color: "#4ECDC4", alt: "Manifesto", onClick: () => setIsManifestoOpen(true), video: "/2.webm", type: "webm" },
   ];
 
   // Check if buttons have appeared before on component mount
@@ -174,7 +166,7 @@ export default function RadialVideoButtons({ isNavigationHubOpen, setIsNavigatio
         >
           <div className="text-lg font-bold mb-2">Scope</div>
           <div className="text-sm text-white/80 leading-relaxed">
-            Watch new tokens emerge in real time. Predictions are drawn from wallet flows, trading volume, and zodiac patterns, modeled through retrocausal logic of the quantum eraser.
+            Watch new tokens emerge in real time. Predictions are drawn from wallet flows, trading volume, and market patterns, modeled through retrocausal logic of the quantum eraser.
           </div>
         </div>
       )}

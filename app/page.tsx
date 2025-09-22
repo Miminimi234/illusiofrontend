@@ -1,7 +1,6 @@
 "use client";
 import dynamic from "next/dynamic";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { useFirebaseWebSocket } from "@/hooks/useFirebaseWebSocket";
 import { AnimatePresence } from "framer-motion";
@@ -14,7 +13,6 @@ const BackgroundVideo = dynamic(() => import("@/components/BackgroundVideo"), { 
 const LeftTypewriter = dynamic(() => import("@/components/LeftTypewriter"), { ssr: false });
 const RadialVideoButtons = dynamic(() => import("@/components/RadialVideoButtons"), { ssr: false });
 const BottomNavigation = dynamic(() => import("@/components/BottomNavigation"), { ssr: false });
-const BirthdayEntry = dynamic(() => import("@/components/BirthdayEntry"), { ssr: false });
 const Scope = dynamic(() => import("@/components/Scope"), { ssr: false });
 const NavigationHub = dynamic(() => import("@/components/NavigationHub"), { ssr: false });
 const OracleHub = dynamic(() => import("@/components/OracleHub"), { ssr: false });
@@ -23,10 +21,6 @@ const Manifesto = dynamic(() => import("@/components/Manifesto"), { ssr: false }
 const CornerLogo = dynamic(() => import("@/components/CornerLogo"), { ssr: false });
 
 export default function Page() {
-  const router = useRouter();
-  const [userBirthday, setUserBirthday] = useState<Date | null>(null);
-  const [zodiacSign, setZodiacSign] = useState<string>("");
-  const [showMainPage, setShowMainPage] = useState(false);
   const [isNavigationHubOpen, setIsNavigationHubOpen] = useState(false);
   const [isScopeOpen, setIsScopeOpen] = useState(false);
   const [isOracleHubOpen, setIsOracleHubOpen] = useState(false);
@@ -111,25 +105,7 @@ export default function Page() {
     console.log('🔍 Initial useEffect running...');
     
     try {
-      const savedBirthday = localStorage.getItem('userBirthday');
-      const savedZodiacSign = localStorage.getItem('zodiacSign');
-      
-      console.log('🔍 localStorage values:', {
-        savedBirthday: !!savedBirthday,
-        savedZodiacSign: !!savedZodiacSign
-      });
-      
-      if (savedBirthday && savedZodiacSign) {
-        console.log('🔍 Found saved data, setting up main page...');
-        setUserBirthday(new Date(savedBirthday));
-        setZodiacSign(savedZodiacSign);
-        setShowMainPage(true);
-      } else {
-        console.log('🔍 No saved data, will show birthday entry...');
-        setShowMainPage(false);
-      }
-      
-      console.log('🔍 Setting isLoading to false and initialized to true...');
+      console.log('🔍 Setting up main page directly...');
       setIsLoading(false);
       setIsInitialized(true);
     } catch (error) {
@@ -139,31 +115,6 @@ export default function Page() {
     }
   }, []);
 
-  // Handle URL params after initialization
-  useEffect(() => {
-    if (!isInitialized || typeof window === 'undefined') return;
-    
-    console.log('🔍 Handling URL params...');
-    const urlParams = new URLSearchParams(window.location.search);
-    const hub = urlParams.get('hub');
-    if (hub) {
-      console.log('🔍 URL hub parameter:', hub);
-      switch (hub) {
-        case 'scope':
-          setIsScopeOpen(true);
-          break;
-        case 'navigation':
-          setIsNavigationHubOpen(true);
-          break;
-        case 'oracle':
-          setIsOracleHubOpen(true);
-          break;
-        case 'manifesto':
-          setIsManifestoOpen(true);
-          break;
-      }
-    }
-  }, [isInitialized]);
 
   // Fallback timeout to ensure loading is cleared
   useEffect(() => {
@@ -188,93 +139,17 @@ export default function Page() {
     };
   }, []);
 
-  const handleBirthdaySubmit = (birthday: Date) => {
-    setUserBirthday(birthday);
-    
-    // Calculate zodiac sign
-    const month = birthday.getMonth() + 1;
-    const day = birthday.getDate();
-    
-    let sign = "";
-    if ((month === 3 && day >= 21) || (month === 4 && day <= 19)) sign = "aries";
-    else if ((month === 4 && day >= 20) || (month === 5 && day <= 20)) sign = "taurus";
-    else if ((month === 5 && day >= 21) || (month === 6 && day <= 20)) sign = "gemini";
-    else if ((month === 6 && day >= 21) || (month === 7 && day <= 22)) sign = "cancer";
-    else if ((month === 7 && day >= 23) || (month === 8 && day <= 22)) sign = "leo";
-    else if ((month === 8 && day >= 23) || (month === 9 && day <= 22)) sign = "virgo";
-    else if ((month === 9 && day >= 23) || (month === 10 && day <= 22)) sign = "libra";
-    else if ((month === 10 && day >= 23) || (month === 11 && day <= 21)) sign = "scorpio";
-    else if ((month === 11 && day >= 22) || (month === 12 && day <= 21)) sign = "sagittarius";
-    else if ((month === 12 && day >= 22) || (month === 1 && day <= 19)) sign = "capricorn";
-    else if ((month === 1 && day >= 20) || (month === 2 && day <= 18)) sign = "aquarius";
-    else sign = "pisces";
-    
-    setZodiacSign(sign);
-    
-    // Save to localStorage
-    localStorage.setItem('userBirthday', birthday.toISOString());
-    localStorage.setItem('zodiacSign', sign);
-    
-    // Don't automatically proceed - let the user click the button in BirthdayEntry
-  };
-
-  const handleProceedToMainPage = () => {
-    setShowMainPage(true);
-  };
 
 
-  // Functions to handle hub navigation with URL routing
-  const saveScopeState = (isOpen: boolean) => {
-    setIsScopeOpen(isOpen);
-    if (isOpen) {
-      router.push('/scope');
-    } else {
-      router.push('/');
-    }
-  };
 
-  const saveNavigationState = (isOpen: boolean) => {
-    setIsNavigationHubOpen(isOpen);
-    if (isOpen) {
-      router.push('/navigation');
-    } else {
-      router.push('/');
-    }
-  };
-
-  const saveOracleState = (isOpen: boolean) => {
-    setIsOracleHubOpen(isOpen);
-    if (isOpen) {
-      router.push('/oracle');
-    } else {
-      router.push('/');
-    }
-  };
-
-  const saveManifestoState = (isOpen: boolean) => {
-    setIsManifestoOpen(isOpen);
-    if (isOpen) {
-      router.push('/manifesto');
-    } else {
-      router.push('/');
-    }
-  };
-
-  // Show loading state while checking localStorage
+  // Show loading state while initializing
   if (isLoading) {
     return <div className="fixed inset-0 bg-black flex items-center justify-center">
       <div className="text-white text-xl">Loading...</div>
     </div>;
   }
 
-  // Show birthday entry first (only if no saved data)
-  if (!userBirthday) {
-    return <BirthdayEntry onBirthdaySubmit={handleBirthdaySubmit} onProceedToMainPage={handleProceedToMainPage} />;
-  }
-
-  // No longer need separate zodiac display - it's now integrated into BirthdayEntry
-
-  // Show main page
+  // Show main page directly
   return (
     <ErrorBoundary>
       <main className="fixed inset-0 overflow-visible">
@@ -285,13 +160,13 @@ export default function Page() {
         <CornerLogo size={64} isVisible={cornerLogoVisible} />
         <RadialVideoButtons 
           isNavigationHubOpen={isNavigationHubOpen}
-          setIsNavigationHubOpen={saveNavigationState}
+          setIsNavigationHubOpen={setIsNavigationHubOpen}
           isScopeOpen={isScopeOpen}
-          setIsScopeOpen={saveScopeState}
+          setIsScopeOpen={setIsScopeOpen}
           isOracleHubOpen={isOracleHubOpen}
-          setIsOracleHubOpen={saveOracleState}
+          setIsOracleHubOpen={setIsOracleHubOpen}
           isManifestoOpen={isManifestoOpen}
-          setIsManifestoOpen={saveManifestoState}
+          setIsManifestoOpen={setIsManifestoOpen}
         />
         <BottomNavigation isNavigationHubOpen={isNavigationHubOpen} isOracleHubOpen={isOracleHubOpen} isScopeOpen={isScopeOpen} />
         
@@ -301,7 +176,7 @@ export default function Page() {
             <NavigationHub 
               key="navigation"
               isOpen={isNavigationHubOpen}
-              onClose={() => saveNavigationState(false)}
+              onClose={() => setIsNavigationHubOpen(false)}
             />
           )}
         </AnimatePresence>
@@ -325,7 +200,7 @@ export default function Page() {
               isHoverPaused={false}
               queuedTokens={[]}
               newTokenMint={null}
-              onClose={() => saveScopeState(false)}
+              onClose={() => setIsScopeOpen(false)}
               onAddToken={handleAddToken}
               onResetTokens={handleResetTokens}
               isSearchMode={false}
@@ -336,7 +211,7 @@ export default function Page() {
         {/* ORACLE HUB component - overlays on top of background */}
         <OracleHub 
           isOpen={isOracleHubOpen}
-          onClose={() => saveOracleState(false)}
+          onClose={() => setIsOracleHubOpen(false)}
         />
 
         {/* MANIFESTO component - overlays on top of background */}
@@ -345,7 +220,7 @@ export default function Page() {
             <Manifesto 
               key="manifesto"
               isOpen={isManifestoOpen}
-              onClose={() => saveManifestoState(false)}
+              onClose={() => setIsManifestoOpen(false)}
             />
           )}
         </AnimatePresence>

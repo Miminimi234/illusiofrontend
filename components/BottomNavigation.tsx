@@ -1,6 +1,5 @@
 "use client";
 import React, { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
 
 interface BottomNavigationProps {
   isNavigationHubOpen?: boolean;
@@ -9,7 +8,6 @@ interface BottomNavigationProps {
 }
 
 export default function BottomNavigation({ isNavigationHubOpen = false, isOracleHubOpen = false, isScopeOpen = false }: BottomNavigationProps) {
-  const router = useRouter();
   const [visibleButtons, setVisibleButtons] = useState<number[]>([]);
   const [position, setPosition] = useState({ x: 0, y: 0 }); // 0 = center, 1 = right
   const animationRef = useRef<number | undefined>(undefined);
@@ -139,7 +137,7 @@ export default function BottomNavigation({ isNavigationHubOpen = false, isOracle
         </svg>
         
         {/* Coming Soon Tooltip */}
-        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-black/90 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap pointer-events-none z-50">
+        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-black/90 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap pointer-events-none z-50">
           Coming soon
           <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-black/90"></div>
         </div>

@@ -143,7 +143,7 @@ export default function OracleHub({ isOpen, onClose }: OracleHubProps) {
                   <h3 className="text-sm font-bold text-white mb-1" style={{ fontFamily: 'VT323, monospace' }}>
                     The Analyzer
                   </h3>
-                  <p className="text-white/70 text-xs leading-tight" style={{ fontFamily: 'VT323, monospace' }}>
+                  <p className="text-white/70 text-sm leading-tight" style={{ fontFamily: 'VT323, monospace' }}>
                     Analyzes wallet movements and trading patterns.
                   </p>
                 </div>
@@ -151,7 +151,7 @@ export default function OracleHub({ isOpen, onClose }: OracleHubProps) {
                   <h3 className="text-sm font-bold text-white mb-1" style={{ fontFamily: 'VT323, monospace' }}>
                     The Predictor
                   </h3>
-                  <p className="text-white/70 text-xs leading-tight" style={{ fontFamily: 'VT323, monospace' }}>
+                  <p className="text-white/70 text-sm leading-tight" style={{ fontFamily: 'VT323, monospace' }}>
                     Projects future price movements and trends.
                   </p>
                 </div>
@@ -159,7 +159,7 @@ export default function OracleHub({ isOpen, onClose }: OracleHubProps) {
                   <h3 className="text-sm font-bold text-white mb-1" style={{ fontFamily: 'VT323, monospace' }}>
                     The Quantum Eraser
                   </h3>
-                  <p className="text-white/70 text-xs leading-tight" style={{ fontFamily: 'VT323, monospace' }}>
+                  <p className="text-white/70 text-sm leading-tight" style={{ fontFamily: 'VT323, monospace' }}>
                     Removes noise to reveal quantum signals.
                   </p>
                 </div>
@@ -167,7 +167,7 @@ export default function OracleHub({ isOpen, onClose }: OracleHubProps) {
                   <h3 className="text-sm font-bold text-white mb-1" style={{ fontFamily: 'VT323, monospace' }}>
                     The Retrocausal
                   </h3>
-                  <p className="text-white/70 text-xs leading-tight" style={{ fontFamily: 'VT323, monospace' }}>
+                  <p className="text-white/70 text-sm leading-tight" style={{ fontFamily: 'VT323, monospace' }}>
                     Reasons backwards from future outcomes.
                   </p>
                 </div>
@@ -199,7 +199,7 @@ export default function OracleHub({ isOpen, onClose }: OracleHubProps) {
                   <div className="max-h-32 overflow-y-auto">
                     <div className="space-y-1">
                       {tokens.slice(0, 5).map((token, index) => (
-                        <div key={token.id} className="text-xs text-white/70 bg-black/30 p-2 rounded" style={{ fontFamily: 'VT323, monospace' }}>
+                        <div key={token.id} className="text-sm text-white/70 bg-black/30 p-2 rounded" style={{ fontFamily: 'VT323, monospace' }}>
                           <div className="flex justify-between">
                             <span className="truncate max-w-[120px]">{token.symbol || 'Unknown'}</span>
                             <span className="text-green-400">
@@ -213,7 +213,7 @@ export default function OracleHub({ isOpen, onClose }: OracleHubProps) {
                       ))}
                     </div>
                     {tokens.length > 5 && (
-                      <div className="text-xs text-white/50 text-center mt-1" style={{ fontFamily: 'VT323, monospace' }}>
+                      <div className="text-sm text-white/50 text-center mt-1" style={{ fontFamily: 'VT323, monospace' }}>
                         +{tokens.length - 5} more tokens...
                       </div>
                     )}
@@ -222,7 +222,7 @@ export default function OracleHub({ isOpen, onClose }: OracleHubProps) {
                 {!connectionStatus.isConnected && (
                   <button
                     onClick={reconnectFirebase}
-                    className="mt-2 px-3 py-1 bg-white/10 border border-white/20 rounded text-white/80 hover:text-white hover:bg-white/20 transition-colors duration-200 text-xs"
+                    className="mt-2 px-3 py-1 bg-white/10 border border-white/20 rounded text-white/80 hover:text-white hover:bg-white/20 transition-colors duration-200 text-sm"
                     style={{ fontFamily: 'VT323, monospace' }}
                   >
                     Reconnect
@@ -294,7 +294,7 @@ export default function OracleHub({ isOpen, onClose }: OracleHubProps) {
                             <h3 className="text-white font-bold text-sm" style={{ fontFamily: 'VT323, monospace' }}>
                               Archive #{archive.id.split('-')[1].slice(-6)}
                             </h3>
-                            <span className="text-white/60 text-xs" style={{ fontFamily: 'VT323, monospace' }}>
+                            <span className="text-white/60 text-sm" style={{ fontFamily: 'VT323, monospace' }}>
                               {archive.date} • {archive.time}
                             </span>
                           </div>
@@ -302,13 +302,13 @@ export default function OracleHub({ isOpen, onClose }: OracleHubProps) {
                           {/* ASCII Banner Preview - smaller */}
                           {archive.asciiBanner && (
                             <div className="mb-2 p-1 bg-black/50 rounded">
-                              <pre className="text-green-400 text-xs leading-tight whitespace-pre-wrap" style={{ fontFamily: 'VT323, monospace' }}>
+                              <pre className="text-green-400 text-sm leading-tight whitespace-pre-wrap" style={{ fontFamily: 'VT323, monospace' }}>
                                 {archive.asciiBanner.split('\n').slice(0, 2).join('\n')}...
                               </pre>
                             </div>
                           )}
                           
-                          <div className="text-white/80 text-xs" style={{ fontFamily: 'VT323, monospace' }}>
+                          <div className="text-white/80 text-sm" style={{ fontFamily: 'VT323, monospace' }}>
                             {archive.messageCount} messages • Click to view
                           </div>
                         </div>

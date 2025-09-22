@@ -8,6 +8,7 @@ import ImageWithFallback from './ImageWithFallback';
 import HoverImagePreview from './HoverImagePreview';
 import CreationTimeDisplay from './CreationTimeDisplay';
 import SearchDropdown from './SearchDropdown';
+import SocialBadges from './SocialBadges';
 import { serverChatService } from '../utils/serverChatService';
 import { simpleGrokService, ChatMessage } from '../utils/simpleGrokService';
 import { aiForecastService, ForecastData } from '../utils/aiForecastService';
@@ -347,7 +348,7 @@ const WatchlistPopup: React.FC<{
                         src={token.imageUrl || undefined}
                         alt={token.symbol || token.name || "Token"}
                         className="w-full h-full object-cover"
-                        fallbackClassName="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold"
+                        fallbackClassName="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold"
                       />
                     </div>
                     <div>
@@ -426,7 +427,7 @@ const HeaderStarButton: React.FC<{ tokens: any[]; onTokenClick?: (token: any) =>
           />
         </svg>
         {watchlist.size > 0 && (
-          <span className="absolute -top-1 -right-1 bg-yellow-400 text-black text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold border-2 border-black">
+          <span className="absolute -top-1 -right-1 bg-yellow-400 text-black text-sm rounded-full w-5 h-5 flex items-center justify-center font-bold border-2 border-black">
             {watchlist.size}
           </span>
         )}
@@ -746,7 +747,7 @@ const TokenCardBase: React.FC<CardProps> = React.memo(({ token, visibleMintsRef,
               thumbClass="h-full w-full object-cover rounded-md"
             />
           ) : (
-            <div className="h-full w-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold rounded-md">
+            <div className="h-full w-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold rounded-md">
               {(token.symbol || token.name || "T").slice(0, 2).toUpperCase()}
             </div>
           )}
@@ -758,7 +759,7 @@ const TokenCardBase: React.FC<CardProps> = React.memo(({ token, visibleMintsRef,
             token.isStock ? 'text-sm' : 'text-sm'
           }`}>
             <span className={`text-white/80 font-mono font-bold uppercase ${
-              token.isStock ? 'text-xs' : 'text-xs'
+              token.isStock ? 'text-sm' : 'text-sm'
             }`}>
               {token.symbol || token.mint.slice(0, 4)}
             </span>
@@ -846,7 +847,7 @@ const TokenCardBase: React.FC<CardProps> = React.memo(({ token, visibleMintsRef,
                         )
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                          <span className="text-white text-xs font-bold">
+                          <span className="text-white text-sm font-bold">
                             {attachedCompanion.split(' ').map(word => word[0]).join('')}
                           </span>
                         </div>
@@ -1006,7 +1007,7 @@ const TokenCardBase: React.FC<CardProps> = React.memo(({ token, visibleMintsRef,
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-teal-400">
                 <path d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zm4 18v-6h2.5l-2.54-7.63A1.5 1.5 0 0 0 18.54 8H17c-.8 0-1.54.37-2.01.99L12 11l-2.99-2.01A2.5 2.5 0 0 0 7 8H5.46c-.8 0-1.54.37-2.01.99L1 15.37V22h2v-6h2.5l2.5 7.5h2L8.5 16H11v6h2v-6h2.5l2.5 7.5h2L16.5 16H19v6h2z"/>
               </svg>
-              <span className="text-xs text-white/80 font-mono relative group/badge">
+              <span className="text-sm text-white/80 font-mono relative group/badge">
                 <span className="group-hover/badge:opacity-0 transition-opacity duration-200">
                   {token.audit.topHoldersPercentage.toFixed(1)}%
                 </span>
@@ -1026,7 +1027,7 @@ const TokenCardBase: React.FC<CardProps> = React.memo(({ token, visibleMintsRef,
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-teal-400">
                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
               </svg>
-              <span className="text-xs text-white/80 font-mono relative group/badge">
+              <span className="text-sm text-white/80 font-mono relative group/badge">
                 <span className="group-hover/badge:opacity-0 transition-opacity duration-200">
                   {token.audit.devBalancePercentage.toFixed(1)}%
                 </span>
@@ -1039,7 +1040,7 @@ const TokenCardBase: React.FC<CardProps> = React.memo(({ token, visibleMintsRef,
         </div>
         
         {/* Contract Address - positioned on the far right */}
-        <span className="text-xs text-white/30 font-mono">
+        <span className="text-sm text-white/30 font-mono">
           {token.mint.slice(0, 4)}...{token.mint.slice(-4)}
         </span>
       </div>
@@ -1047,7 +1048,7 @@ const TokenCardBase: React.FC<CardProps> = React.memo(({ token, visibleMintsRef,
       {/* Bonding Curve Badge */}
       {(token.is_on_curve || token.status === 'curve') && (
         <div className="mt-2 flex justify-center">
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-purple-500 to-pink-500 text-white">
+          <span className="inline-flex items-center px-2 py-1 rounded-full text-sm font-medium bg-gradient-to-r from-purple-500 to-pink-500 text-white">
             BONDING CURVE
           </span>
         </div>
@@ -1057,17 +1058,17 @@ const TokenCardBase: React.FC<CardProps> = React.memo(({ token, visibleMintsRef,
       {token.stockInfo && (
         <div className="mt-2 space-y-1">
           {token.stockInfo.primary_exchange && (
-            <div className="text-xs text-white/50">
+            <div className="text-sm text-white/50">
               <span className="text-white/60">Exchange:</span> {token.stockInfo.primary_exchange}
             </div>
           )}
           {token.stockInfo.type && (
-            <div className="text-xs text-white/50">
+            <div className="text-sm text-white/50">
               <span className="text-white/60">Type:</span> {token.stockInfo.type}
             </div>
           )}
           {token.stockInfo.locale && (
-            <div className="text-xs text-white/50">
+            <div className="text-sm text-white/50">
               <span className="text-white/60">Market:</span> {token.stockInfo.locale.toUpperCase()}
             </div>
           )}
@@ -1254,7 +1255,7 @@ function TokenColumn({
                           }}
                           className="absolute -top-2 -right-2 z-10"
                         >
-                          <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg border border-green-400">
+                          <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white text-sm font-bold px-2 py-1 rounded-full shadow-lg border border-green-400">
                             NEW
                           </div>
                         </motion.div>
@@ -1324,7 +1325,7 @@ function InsightCard({
       {/* Header row */}
       <div className="flex items-center gap-2 mb-2">
         {icon}
-        <h3 className="uppercase tracking-wider text-[11px] text-white/70 font-mono">{title}</h3>
+        <h3 className="uppercase tracking-wider text-sm text-white/70 font-mono">{title}</h3>
       </div>
       <div className="border-b border-neutral-800/60 -mx-4 mt-2 mb-3" />
       {children}
@@ -1351,7 +1352,7 @@ function ConfidenceBar({
           style={{ width: `${clampedValue}%` }}
         />
       </div>
-      <span className="text-[11px] font-mono px-1.5 py-0.5 rounded-md bg-white/5 text-white/80">
+      <span className="text-sm font-mono px-1.5 py-0.5 rounded-md bg-white/5 text-white/80">
         {clampedValue}%
       </span>
     </div>
@@ -1361,9 +1362,11 @@ function ConfidenceBar({
 // Insights Column Component
 function InsightsColumn({ 
   focusToken,
+  setFocusToken,
   className = ""
 }: { 
   focusToken: any | null;
+  setFocusToken: (token: any) => void;
   className?: string;
 }) {
   const [holderCount, setHolderCount] = useState<number | null>(null);
@@ -1417,6 +1420,17 @@ function InsightsColumn({
         const data = await response.json();
         const tokenData = data[0];
         
+        console.log('🔍 JUPITER API Response:', {
+          mint,
+          hasWebsite: !!tokenData?.website,
+          hasTwitter: !!tokenData?.twitter,
+          hasTelegram: !!tokenData?.telegram,
+          hasLaunchpad: !!tokenData?.launchpad,
+          website: tokenData?.website,
+          twitter: tokenData?.twitter,
+          telegram: tokenData?.telegram,
+          launchpad: tokenData?.launchpad
+        });
         
         if (tokenData) {
           // Use Jupiter's provided market cap or calculate if not available
@@ -1489,15 +1503,26 @@ function InsightsColumn({
             createdAt: tokenData.firstPool?.createdAt || tokenData.createdAt || tokenData.created_at || tokenData.creationTime || tokenData.launchTime || null,
             lastUpdate: new Date()
           });
+
+          // Return social data for parent component to handle
+          return {
+            website: tokenData.website,
+            twitter: tokenData.twitter,
+            telegram: tokenData.telegram,
+            source: tokenData.launchpad
+          };
           
         } else {
           // No market data found
+          return null;
         }
       } else {
         console.log(`❌ JUPITER: API failed with status ${response.status}`);
+        return null;
       }
     } catch (error) {
       console.error(`❌ JUPITER: Error fetching market data for ${mint.slice(0, 8)}...:`, error);
+      return null;
     } finally {
       if (isInitial) {
         setJupiterLoading(false);
@@ -1638,7 +1663,17 @@ function InsightsColumn({
   // Fetch Jupiter market data when focusToken changes
   useEffect(() => {
     if (focusToken && focusToken.mint) {
-      fetchJupiterMarketData(focusToken.mint, true);
+      fetchJupiterMarketData(focusToken.mint, true).then((socialData) => {
+        if (socialData) {
+          setFocusToken((prev: any | null) => ({
+            ...prev,
+            website: socialData.website || prev?.website,
+            twitter: socialData.twitter || prev?.twitter,
+            telegram: socialData.telegram || prev?.telegram,
+            source: socialData.source || prev?.source
+          }));
+        }
+      });
     } else {
       setJupiterData(null);
     }
@@ -1647,7 +1682,17 @@ function InsightsColumn({
   // Refetch data when timeframe changes
   useEffect(() => {
     if (focusToken && focusToken.mint && jupiterData) {
-      fetchJupiterMarketData(focusToken.mint, false);
+      fetchJupiterMarketData(focusToken.mint, false).then((socialData) => {
+        if (socialData) {
+          setFocusToken((prev: any | null) => ({
+            ...prev,
+            website: socialData.website || prev?.website,
+            twitter: socialData.twitter || prev?.twitter,
+            telegram: socialData.telegram || prev?.telegram,
+            source: socialData.source || prev?.source
+          }));
+        }
+      });
     }
   }, [selectedTimeframe]);
 
@@ -1668,7 +1713,17 @@ function InsightsColumn({
     if (!focusToken || !focusToken.mint) return;
 
     const interval = setInterval(() => {
-      fetchJupiterMarketData(focusToken.mint, false);
+      fetchJupiterMarketData(focusToken.mint, false).then((socialData) => {
+        if (socialData) {
+          setFocusToken((prev: any | null) => ({
+            ...prev,
+            website: socialData.website || prev?.website,
+            twitter: socialData.twitter || prev?.twitter,
+            telegram: socialData.telegram || prev?.telegram,
+            source: socialData.source || prev?.source
+          }));
+        }
+      });
     }, 5000); // 5 seconds
 
     return () => clearInterval(interval);
@@ -2085,7 +2140,7 @@ function InsightsColumn({
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
+                    <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold">
                       {(focusToken.symbol || focusToken.name || "T").slice(0, 2).toUpperCase()}
                     </div>
                   )}
@@ -2101,19 +2156,27 @@ function InsightsColumn({
                       {focusToken.name || focusToken.symbol || `${focusToken.mint.slice(0, 4)}…${focusToken.mint.slice(-4)}`}
                     </span>
                   </div>
-                  <div className="text-white/50 text-xs font-mono">
+                  <div className="text-white/50 text-sm font-mono">
                     {focusToken.mint.slice(0, 8)}...{focusToken.mint.slice(-8)}
                   </div>
                 </div>
                 
-                {/* Status Badge */}
-                <div className={`inline-flex items-center px-2 py-1 rounded-full text-[11px] font-mono border ${
-                  focusToken.is_on_curve || focusToken.status === 'curve'
-                    ? 'bg-purple-500/15 text-purple-300 border-purple-500/30'
-                    : 'bg-green-500/15 text-green-300 border-green-500/30'
-                }`}>
-                  {focusToken.is_on_curve || focusToken.status === 'curve' ? 'CURVE' : 'ACTIVE'}
-                </div>
+                {/* Social Links */}
+                {(focusToken.website || focusToken.twitter || focusToken.telegram || focusToken.source) && (
+                  <div className="flex items-center gap-2">
+                    <SocialBadges 
+                      links={{
+                        dexscreener: `https://dexscreener.com/solana/${focusToken.mint}`,
+                        jupiter: `https://jup.ag/swap/SOL-${focusToken.mint}`,
+                        explorer: `https://solscan.io/token/${focusToken.mint}`
+                      }}
+                      website={focusToken.website}
+                      twitter={focusToken.twitter}
+                      telegram={focusToken.telegram}
+                      source={focusToken.source}
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
@@ -2132,7 +2195,7 @@ function InsightsColumn({
                   <button
                     key={timeframe}
                     onClick={() => setSelectedTimeframe(timeframe)}
-                    className={`px-2 py-1 text-xs font-mono rounded transition-colors ${
+                    className={`px-2 py-1 text-sm font-mono rounded transition-colors ${
                       selectedTimeframe === timeframe
                         ? 'bg-white/20 text-white font-semibold'
                         : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80'
@@ -2165,7 +2228,7 @@ function InsightsColumn({
                             <div className="animate-spin rounded-full h-3 w-3 border-b border-white/40"></div>
                           )}
                           {jupiterData && !jupiterRefreshing && (
-                            <span className="text-white/40 text-xs">(live)</span>
+                            <span className="text-white/40 text-sm">(live)</span>
                           )}
                         </div>
                       )}
@@ -2188,7 +2251,7 @@ function InsightsColumn({
                             <div className="animate-spin rounded-full h-3 w-3 border-b border-white/40"></div>
                           )}
                           {jupiterData && !jupiterRefreshing && (
-                            <span className="text-white/40 text-xs">
+                            <span className="text-white/40 text-sm">
                               ({Math.floor((Date.now() - jupiterData.lastUpdate.getTime()) / 1000)}s)
                             </span>
                           )}
@@ -2213,7 +2276,7 @@ function InsightsColumn({
                             <div className="animate-spin rounded-full h-3 w-3 border-b border-white/40"></div>
                           )}
                           {jupiterData && !jupiterRefreshing && (
-                            <span className="text-white/40 text-xs">
+                            <span className="text-white/40 text-sm">
                               ({Math.floor((Date.now() - jupiterData.lastUpdate.getTime()) / 1000)}s)
                             </span>
                           )}
@@ -2221,7 +2284,7 @@ function InsightsColumn({
                       )}
                     </div>
                     {/* Holder Distribution - Always visible */}
-                    <div className="text-white/60 text-xs font-mono mt-2 flex items-center space-x-4">
+                    <div className="text-white/60 text-sm font-mono mt-2 flex items-center space-x-4">
                       <span className="flex items-center space-x-2">
                         <span>Top:</span>
                         <span className="text-yellow-400 font-semibold">
@@ -2240,7 +2303,7 @@ function InsightsColumn({
                           }
                         </span>
                         {jupiterData && (
-                          <span className="text-white/50 text-xs ml-1">
+                          <span className="text-white/50 text-sm ml-1">
                             ({formatSupply(jupiterData.totalSupply || 0)})
                           </span>
                         )}
@@ -2351,7 +2414,7 @@ function InsightsColumn({
             >
               {/* Error Display */}
               {forecastError && (
-                <div className="mb-3 p-2 bg-red-500/10 border border-red-500/20 rounded text-red-300 text-xs">
+                <div className="mb-3 p-2 bg-red-500/10 border border-red-500/20 rounded text-red-300 text-sm">
                   ⚠️ {forecastError}
                 </div>
               )}
@@ -2403,7 +2466,7 @@ function InsightsColumn({
                     <div className="text-white/60 text-sm font-mono mb-2">Key Signals</div>
                     <div className="space-y-1">
                       {aiForecast.signals.slice(0, 4).map((signal, index) => (
-                        <div key={index} className="text-xs text-white/70 bg-white/5 px-2 py-1 rounded border border-white/10">
+                        <div key={index} className="text-sm text-white/70 bg-white/5 px-2 py-1 rounded border border-white/10">
                           • {signal}
                         </div>
                       ))}
@@ -2426,20 +2489,20 @@ function InsightsColumn({
             >
               <div className="grid grid-cols-2 gap-x-6 gap-y-2">
                 <div>
-                  <div className="text-white/50 text-[12px] font-mono mb-1">Price momentum</div>
-                  <div className="text-white text-[12px] font-mono">{metrics?.priceMomentum || "N/A"}</div>
+                  <div className="text-white/50 text-sm font-mono mb-1">Price momentum</div>
+                  <div className="text-white text-sm font-mono">{metrics?.priceMomentum || "N/A"}</div>
                 </div>
                 <div>
-                  <div className="text-white/50 text-[12px] font-mono mb-1">Volume momentum</div>
-                  <div className="text-white text-[12px] font-mono">{metrics?.volumeMomentum || "N/A"}</div>
+                  <div className="text-white/50 text-sm font-mono mb-1">Volume momentum</div>
+                  <div className="text-white text-sm font-mono">{metrics?.volumeMomentum || "N/A"}</div>
                 </div>
                 <div>
-                  <div className="text-white/50 text-[12px] font-mono mb-1">Acceleration</div>
-                  <div className="text-white text-[12px] font-mono">{metrics?.acceleration || "N/A"}</div>
+                  <div className="text-white/50 text-sm font-mono mb-1">Acceleration</div>
+                  <div className="text-white text-sm font-mono">{metrics?.acceleration || "N/A"}</div>
                 </div>
                 <div>
-                  <div className="text-white/50 text-[12px] font-mono mb-1">Heating/Cooling</div>
-                  <div className={`inline-flex items-center px-2 py-1 rounded-full text-[11px] font-mono border ${
+                  <div className="text-white/50 text-sm font-mono mb-1">Heating/Cooling</div>
+                  <div className={`inline-flex items-center px-2 py-1 rounded-full text-sm font-mono border ${
                     metrics?.heatingCooling === 'Hot' 
                       ? 'bg-red-500/15 text-red-300 border-red-500/30' 
                       : metrics?.heatingCooling === 'Warm' 
@@ -3316,8 +3379,8 @@ export const Scope = ({
                   // Convert the search token to the format expected by SCOPE (TokenData interface)
                   const scopeToken = {
                     // Basic token info
-                    address: token.mint, // Using id as address
-                    mint: token.mint, // Primary identifier
+                    address: token.id, // Using id as address
+                    mint: token.id, // Primary identifier
                     name: token.name,
                     symbol: token.symbol,
                     imageUrl: token.icon, // Fixed field name
@@ -3418,7 +3481,7 @@ export const Scope = ({
                   setFocusToken(scopeToken);
                   
                   // Scroll to the token
-                  const tokenElement = document.querySelector(`[data-mint="${token.mint}"]`);
+                  const tokenElement = document.querySelector(`[data-mint="${token.id}"]`);
                   if (tokenElement) {
                     tokenElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
                   }
@@ -3519,14 +3582,14 @@ export const Scope = ({
                 
                 {/* Search mode indicator */}
                 {isSearchMode && (
-                  <div className="absolute top-4 right-16 px-2 py-1 bg-yellow-500/20 text-yellow-400 text-xs rounded border border-yellow-500/40">
+                  <div className="absolute top-4 right-16 px-2 py-1 bg-yellow-500/20 text-yellow-400 text-sm rounded border border-yellow-500/40">
                     Search Mode
                   </div>
                 )}
                 
                 {/* Loading indicator for stocks */}
                 {isLoadingStocks && (
-                  <div className="absolute top-4 right-2 px-2 py-1 bg-blue-500 text-white text-xs rounded">
+                  <div className="absolute top-4 right-2 px-2 py-1 bg-blue-500 text-white text-sm rounded">
                     Loading stocks...
                   </div>
                 )}
@@ -3578,12 +3641,12 @@ export const Scope = ({
                             setComingSoonType('stocks');
                             setShowComingSoon(true);
                           }}
-                          className={`w-full px-3 py-1.5 text-xs font-medium text-left hover:bg-white/10 transition-colors duration-200 overflow-hidden ${
+                          className={`w-full px-3 py-1.5 text-sm font-medium text-left hover:bg-white/10 transition-colors duration-200 overflow-hidden ${
                             assetType === 'stocks' ? 'text-white bg-white/10' : 'text-white/70'
                           }`}
                         >
                           <span>Stocks</span>
-                          <span className="text-xs text-white/50 ml-1">(Coming Soon)</span>
+                          <span className="text-sm text-white/50 ml-1">(Coming Soon)</span>
                         </button>
                         <button
                           onClick={() => {
@@ -3591,12 +3654,12 @@ export const Scope = ({
                             setComingSoonType('news');
                             setShowComingSoon(true);
                           }}
-                          className={`w-full px-3 py-1.5 text-xs font-medium text-left hover:bg-white/10 transition-colors duration-200 overflow-hidden ${
+                          className={`w-full px-3 py-1.5 text-sm font-medium text-left hover:bg-white/10 transition-colors duration-200 overflow-hidden ${
                             assetType === 'news' ? 'text-white bg-white/10' : 'text-white/70'
                           }`}
                         >
                           <span>News</span>
-                          <span className="text-xs text-white/50 ml-1">(Coming Soon)</span>
+                          <span className="text-sm text-white/50 ml-1">(Coming Soon)</span>
                         </button>
                         <button
                           onClick={() => {
@@ -3604,12 +3667,12 @@ export const Scope = ({
                             setComingSoonType('sports');
                             setShowComingSoon(true);
                           }}
-                          className={`w-full px-3 py-1.5 text-xs font-medium text-left hover:bg-white/10 transition-colors duration-200 overflow-hidden ${
+                          className={`w-full px-3 py-1.5 text-sm font-medium text-left hover:bg-white/10 transition-colors duration-200 overflow-hidden ${
                             assetType === 'sports' ? 'text-white bg-white/10' : 'text-white/70'
                           }`}
                         >
                           <span>Sports</span>
-                          <span className="text-xs text-white/50 ml-1">(Coming Soon)</span>
+                          <span className="text-sm text-white/50 ml-1">(Coming Soon)</span>
                         </button>
                       </div>
                     )}
@@ -3699,6 +3762,7 @@ export const Scope = ({
                 />
                 <InsightsColumn 
                   focusToken={focusToken}
+                  setFocusToken={setFocusToken}
                   className="border-r border-neutral-800/60 flex-1 min-w-0"
                 />
                 <div className="flex flex-col flex-1 min-w-0 relative h-[calc(100vh-200px)] overflow-visible">
@@ -4056,7 +4120,7 @@ export const Scope = ({
                                 }`}
                               >
                                 <div className="text-sm leading-relaxed break-words">{message.content}</div>
-                                <div className={`text-xs mt-2 ${
+                                <div className={`text-sm mt-2 ${
                                   message.role === 'user' ? 'text-blue-200 text-right' : 'text-gray-400 text-left'
                                 }`}>
                                   {new Date(message.timestamp).toLocaleTimeString()}
@@ -4261,7 +4325,7 @@ export const Scope = ({
                                         <p className="text-gray-400 text-sm mt-1">
                                           {conversation.messages.length} messages
                                         </p>
-                                        <p className="text-gray-500 text-xs mt-1">
+                                        <p className="text-gray-500 text-sm mt-1">
                                           {new Date(conversation.timestamp).toLocaleDateString()} at {new Date(conversation.timestamp).toLocaleTimeString()}
                                           {conversation.companionName && ` • ${conversation.companionName}`}
                                         </p>
@@ -4417,7 +4481,7 @@ export const Scope = ({
                     <h3 className="text-sm font-semibold text-white mb-2">Market Cap Range</h3>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="block text-xs text-white/70 mb-1">Min ($)</label>
+                        <label className="block text-sm text-white/70 mb-1">Min ($)</label>
                         <input
                           type="number"
                           value={filters.minMarketCap}
@@ -4427,7 +4491,7 @@ export const Scope = ({
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-white/70 mb-1">Max ($)</label>
+                        <label className="block text-sm text-white/70 mb-1">Max ($)</label>
                         <input
                           type="number"
                           value={filters.maxMarketCap}
@@ -4456,7 +4520,7 @@ export const Scope = ({
                     <h3 className="text-sm font-semibold text-white mb-2">Token Age</h3>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="block text-xs text-white/70 mb-1">Min (minutes)</label>
+                        <label className="block text-sm text-white/70 mb-1">Min (minutes)</label>
                         <input
                           type="number"
                           value={filters.minAge}
@@ -4466,7 +4530,7 @@ export const Scope = ({
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-white/70 mb-1">Max (minutes)</label>
+                        <label className="block text-sm text-white/70 mb-1">Max (minutes)</label>
                         <input
                           type="number"
                           value={filters.maxAge}

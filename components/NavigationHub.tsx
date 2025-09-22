@@ -252,7 +252,7 @@ export default function NavigationHub({ isOpen, onClose }: NavigationHubProps) {
               <h1 className="text-2xl font-bold text-white">
                 RETROCAUSALITY LAB
               </h1>
-              <span className="ml-3 px-2 py-1 bg-blue-500/20 text-blue-300 text-xs rounded-full border border-blue-500/30">
+              <span className="ml-3 px-2 py-1 bg-blue-500/20 text-blue-300 text-sm rounded-full border border-blue-500/30">
                 BETA
               </span>
             </div>
@@ -290,7 +290,7 @@ export default function NavigationHub({ isOpen, onClose }: NavigationHubProps) {
                   </div>
                 </form>
                 {isAnalyzing && (
-                  <div className="px-3 py-1 bg-blue-500/20 text-blue-300 text-xs rounded-full border border-blue-500/30">
+                  <div className="px-3 py-1 bg-blue-500/20 text-blue-300 text-sm rounded-full border border-blue-500/30">
                     Analyzing...
                   </div>
                 )}
@@ -361,7 +361,7 @@ export default function NavigationHub({ isOpen, onClose }: NavigationHubProps) {
                           }}
                         />
                       ) : (
-                        <span className="text-xs font-bold text-white/60">
+                        <span className="text-sm font-bold text-white/60">
                           {token.symbol.charAt(0)}
                         </span>
                       )}
@@ -372,13 +372,13 @@ export default function NavigationHub({ isOpen, onClose }: NavigationHubProps) {
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-white text-sm">{token.symbol}</span>
                         {token.isVerified && (
-                          <span className="text-xs bg-green-500/20 text-green-400 px-1 py-0.5 rounded">
+                          <span className="text-sm bg-green-500/20 text-green-400 px-1 py-0.5 rounded">
                             ✓
                           </span>
                         )}
                       </div>
-                      <div className="text-xs text-white/60 truncate">{token.name}</div>
-                      <div className="text-xs text-white/50 font-mono">
+                      <div className="text-sm text-white/60 truncate">{token.name}</div>
+                      <div className="text-sm text-white/50 font-mono">
                         {token.id.slice(0, 8)}...{token.id.slice(-8)}
                       </div>
                     </div>
@@ -388,7 +388,7 @@ export default function NavigationHub({ isOpen, onClose }: NavigationHubProps) {
                       <div className="text-sm font-semibold text-white">
                         {formatNumber(token.usdPrice)}
                       </div>
-                      <div className="text-xs text-white/60">
+                      <div className="text-sm text-white/60">
                         MC: {formatNumber(token.mcap)}
                       </div>
                     </div>
@@ -445,19 +445,19 @@ export default function NavigationHub({ isOpen, onClose }: NavigationHubProps) {
               <h3 className="text-sm font-bold text-white tracking-wider">MARKET INSIGHTS</h3>
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-transparent border border-white/10 rounded-lg p-3">
-                  <div className="text-xs text-white/60 mb-1">Market Cap</div>
+                  <div className="text-sm text-white/60 mb-1">Market Cap</div>
                   <div className="text-lg font-bold text-green-300">$2.4M</div>
                 </div>
                 <div className="bg-transparent border border-white/10 rounded-lg p-3">
-                  <div className="text-xs text-white/60 mb-1">Liquidity</div>
+                  <div className="text-sm text-white/60 mb-1">Liquidity</div>
                   <div className="text-lg font-bold text-blue-300">$180K</div>
                 </div>
                 <div className="bg-transparent border border-white/10 rounded-lg p-3">
-                  <div className="text-xs text-white/60 mb-1">24h Volume</div>
+                  <div className="text-sm text-white/60 mb-1">24h Volume</div>
                   <div className="text-lg font-bold text-purple-300">$45K</div>
                 </div>
                 <div className="bg-transparent border border-white/10 rounded-lg p-3">
-                  <div className="text-xs text-white/60 mb-1">Volume</div>
+                  <div className="text-sm text-white/60 mb-1">Volume</div>
                   <div className="text-lg font-bold text-orange-300">$45K</div>
                 </div>
               </div>
@@ -468,19 +468,19 @@ export default function NavigationHub({ isOpen, onClose }: NavigationHubProps) {
               <h3 className="text-sm font-bold text-white tracking-wider">QUANTUM FORECAST</h3>
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-transparent border border-white/10 rounded-lg p-3">
-                  <div className="text-xs text-white/60 mb-1">10m Prediction</div>
+                  <div className="text-sm text-white/60 mb-1">10m Prediction</div>
                   <div className="text-lg font-bold text-cyan-300">+2.3%</div>
                 </div>
                 <div className="bg-transparent border border-white/10 rounded-lg p-3">
-                  <div className="text-xs text-white/60 mb-1">1h Prediction</div>
+                  <div className="text-sm text-white/60 mb-1">1h Prediction</div>
                   <div className="text-lg font-bold text-cyan-300">+5.7%</div>
                 </div>
                 <div className="bg-transparent border border-white/10 rounded-lg p-3">
-                  <div className="text-xs text-white/60 mb-1">Expected Range</div>
+                  <div className="text-sm text-white/60 mb-1">Expected Range</div>
                   <div className="text-lg font-bold text-yellow-300">±8%</div>
                 </div>
                 <div className="bg-transparent border border-white/10 rounded-lg p-3">
-                  <div className="text-xs text-white/60 mb-1">Up Probability</div>
+                  <div className="text-sm text-white/60 mb-1">Up Probability</div>
                   <div className="text-lg font-bold text-green-300">60%</div>
                 </div>
               </div>
@@ -544,42 +544,42 @@ export default function NavigationHub({ isOpen, onClose }: NavigationHubProps) {
                   <div className="w-4 h-4 bg-red-500 rounded-full border border-white/20"></div>
                   <div>
                     <div className="font-semibold text-red-300">LASER</div>
-                    <div className="text-xs text-white/70">Quantum light source</div>
+                    <div className="text-sm text-white/70">Quantum light source</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-4 h-4 bg-blue-500 rounded-full border border-white/20"></div>
                   <div>
                     <div className="font-semibold text-blue-300">BBO</div>
-                    <div className="text-xs text-white/70">Entanglement crystal</div>
+                    <div className="text-sm text-white/70">Entanglement crystal</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-4 h-4 bg-cyan-500 rounded-full border border-white/20 transform rotate-45"></div>
                   <div>
                     <div className="font-semibold text-cyan-300">BS (Beam Splitters)</div>
-                    <div className="text-xs text-white/70">Split quantum signals</div>
+                    <div className="text-sm text-white/70">Split quantum signals</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-4 h-4 bg-green-500 border border-white/20 transform rotate-45"></div>
                   <div>
                     <div className="font-semibold text-green-300">M (Mirrors)</div>
-                    <div className="text-xs text-white/70">Reflect quantum info</div>
+                    <div className="text-sm text-white/70">Reflect quantum info</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-4 h-4 bg-white rounded-full border border-white/20"></div>
                   <div>
                     <div className="font-semibold text-white">D (Detectors)</div>
-                    <div className="text-xs text-white/70">Measure quantum states</div>
+                    <div className="text-sm text-white/70">Measure quantum states</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-6 h-6 bg-blue-400 rounded-full border border-white/20"></div>
                   <div>
                     <div className="font-semibold text-blue-300">PREDICTION ENGINE</div>
-                    <div className="text-xs text-white/70">Analyzes all data</div>
+                    <div className="text-sm text-white/70">Analyzes all data</div>
                   </div>
                 </div>
               </div>

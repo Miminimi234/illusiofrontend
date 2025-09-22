@@ -88,7 +88,7 @@ ILLUSIO/
 │   ├── TokenSpecificTransactions.tsx # Token analysis
 │   ├── PureVisualRetrocausality.tsx # Quantum eraser visualization
 │   ├── BackgroundVideo.tsx       # Video backgrounds
-│   ├── BirthdayCursor.tsx        # Custom cursor effects
+│   ├── ...                       # UI components
 │   └── ...                       # Other UI components
 ├── hooks/                        # Custom React hooks
 │   ├── useServerData.ts          # Server data management
@@ -96,7 +96,7 @@ ILLUSIO/
 ├── public/                       # Static assets
 │   ├── BANNER.jpg               # ILLUSIO banner
 │   ├── videos/                  # Background videos
-│   ├── zodiac/                  # Zodiac-themed assets
+│   ├── assets/                  # Static assets
 │   └── WIZZARD/                 # AI companion videos
 ├── server/                       # Backend server
 │   ├── src/                     # Server source code

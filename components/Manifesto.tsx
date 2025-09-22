@@ -26,7 +26,7 @@ This is not prophecy. It is craft. Measure, clean, simulate, compare, then act w
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
-          className="fixed inset-0 z-[50] bg-black/80 backdrop-blur-sm flex items-center justify-center p-8 cursor-default"
+          className="fixed inset-0 z-[50] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 cursor-default"
           onClick={onClose}
         >
           <motion.div
@@ -34,47 +34,59 @@ This is not prophecy. It is craft. Measure, clean, simulate, compare, then act w
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.8, opacity: 0, y: 20 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
-            className="bg-black/90 border border-white/20 rounded-lg p-8 max-w-4xl max-h-[80vh] overflow-y-auto relative cursor-default"
+            className="bg-black/90 border border-white/20 rounded-lg p-4 max-w-6xl w-full mx-2 relative cursor-default"
             onClick={(e) => e.stopPropagation()}
             style={{
-              fontFamily: ' STILL, monospace',
+              fontFamily: 'VT323, monospace',
+              maxHeight: 'calc(100vh - 2rem)',
             }}
           >
             {/* Manifesto content */}
-            <div className="text-white leading-relaxed space-y-6">
-              <div className="flex justify-between items-center mb-8 border-b border-white/20 pb-4">
-                <h1 className="text-3xl font-bold">
+            <div className="text-white leading-relaxed">
+              <div className="flex justify-between items-center mb-6 border-b border-white/20 pb-3">
+                <h1 className="text-2xl font-bold">
                   MANIFESTO
                 </h1>
                 {/* Close button */}
                 <button
                   onClick={onClose}
-                  className="text-white/60 hover:text-white transition-colors duration-200 text-2xl ml-4 cursor-pointer"
+                  className="text-white/60 hover:text-white transition-colors duration-200 text-xl ml-4 cursor-pointer"
                   aria-label="Close manifesto"
                 >
                   ×
                 </button>
               </div>
               
-              <div className="text-lg space-y-6">
-                {manifestoText.split('\n\n').map((paragraph, index) => {
-                  const isHeader = paragraph.startsWith('WE START') || paragraph.startsWith('ALL OF THIS') || paragraph.startsWith('ILLUSIO');
-                  const isAgentSection = paragraph.includes('THE ANALYZER') || paragraph.includes('THE PREDICTOR') || paragraph.includes('THE QUANTUM ERASER');
-                  
-                  return (
-                    <div key={index} className={isHeader ? 'border-l-4 border-white/40 pl-6' : ''}>
-                      {isHeader ? (
-                        <h2 className="text-xl font-bold text-white mb-3 tracking-wider">
-                          {paragraph}
-                        </h2>
-                      ) : (
-                        <p className={`leading-relaxed ${isAgentSection ? 'ml-4 border-l border-white/10 pl-4' : ''}`}>
-                          {paragraph}
-                        </p>
-                      )}
-                    </div>
-                  );
-                })}
+              <div className="text-base space-y-3 leading-tight">
+                {manifestoText.split('\n\n').map((paragraph, index) => (
+                  <p key={index} className="text-white/90">
+                    {paragraph}
+                  </p>
+                ))}
+              </div>
+              
+              {/* Powered by section */}
+              <div className="mt-8 pt-6 border-t border-white/20">
+                <div className="flex items-center justify-center space-x-6">
+                  <span className="text-white/60 text-sm font-mono">Powered by</span>
+                  <div className="flex items-center space-x-4">
+                    <img 
+                      src="/OPENAI.png" 
+                      alt="OpenAI" 
+                      className="h-6 w-auto opacity-80 hover:opacity-100 transition-opacity duration-200"
+                    />
+                    <img 
+                      src="/GEMENI.png" 
+                      alt="Gemini" 
+                      className="h-6 w-auto opacity-80 hover:opacity-100 transition-opacity duration-200"
+                    />
+                    <img 
+                      src="/PERP.png" 
+                      alt="Perplexity" 
+                      className="h-6 w-auto opacity-80 hover:opacity-100 transition-opacity duration-200"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </motion.div>

@@ -56,7 +56,16 @@ You have access to comprehensive real-time market data including:
 - Token age and market confidence metrics
 - All data is provided with actual numbers and technical terms
 
-Use this data to provide clear, technical analysis and trading insights.
+SPORTS FIXTURE AWARENESS:
+Sometimes the data provided might be sports fixture/match data instead of crypto token data. When you receive sports data, you should:
+- Analyze match details (teams, league, status, venue, scores)
+- Provide betting predictions and recommendations
+- Give score predictions for upcoming/live matches
+- Analyze match outcomes for ended games
+- Consider team form, head-to-head records, and match context
+- Provide sports-specific insights rather than crypto analysis
+
+Use this data to provide clear, technical analysis and trading insights for crypto, or sports predictions and betting analysis for sports fixtures.
 
 ${tokenContext}`;
 
@@ -64,28 +73,28 @@ ${tokenContext}`;
       case 'The Analyzer':
         return `${basePrompt}
         
-You are The Analyzer, a technical analyst who examines token fundamentals. You focus on market cap, liquidity depth, holder distribution, trading volume, and dev holding patterns. You're thorough and sometimes skeptical, but you provide clear technical assessments. You identify red flags and analyze token health based on concrete data.
+You are The Analyzer, a technical analyst who examines token fundamentals and sports match data. For crypto: You focus on market cap, liquidity depth, holder distribution, trading volume, and dev holding patterns. For sports: You analyze team form, match statistics, venue factors, and historical performance. You're thorough and sometimes skeptical, but you provide clear technical assessments. You identify red flags and analyze token health or match outcomes based on concrete data.
 
 RESPONSE STYLE: Keep responses SHORT and PRECISE - maximum 2-3 sentences. Be direct and to the point.`;
 
       case 'The Predictor':
         return `${basePrompt}
         
-You are The Predictor, a market analyst who forecasts price movements. You use technical indicators, momentum analysis, and volatility patterns to predict where the token price is likely to move next. You're confident in your analysis and provide clear trading insights based on market data.
+You are The Predictor, a market analyst who forecasts price movements and sports match outcomes. For crypto: You use technical indicators, momentum analysis, and volatility patterns to predict where the token price is likely to move next. For sports: You predict match results, scores, and betting outcomes based on team form, head-to-head records, and match context. You're confident in your analysis and provide clear trading insights or sports predictions based on available data.
 
 RESPONSE STYLE: Keep responses SHORT and PRECISE - maximum 2-3 sentences. Be direct and to the point.`;
 
       case 'The Quantum Eraser':
         return `${basePrompt}
         
-You are The Quantum Eraser, a data analyst who filters out market noise. You identify and remove misleading data like wash trading, bot activity, and fake volume to reveal the true market signals. You provide clean, accurate analysis by focusing on genuine trading activity.
+You are The Quantum Eraser, a data analyst who filters out market noise and sports data inconsistencies. For crypto: You identify and remove misleading data like wash trading, bot activity, and fake volume to reveal the true market signals. For sports: You filter out misleading statistics, identify key performance indicators, and focus on genuine match factors that matter. You provide clean, accurate analysis by focusing on genuine trading activity or authentic sports performance data.
 
 RESPONSE STYLE: Keep responses SHORT and PRECISE - maximum 2-3 sentences. Be direct and to the point.`;
 
       case 'The Retrocasual':
         return `${basePrompt}
         
-You are The Retrocasual, a strategic analyst who works with historical patterns. You analyze past performance and market cycles to understand current token behavior and predict future outcomes. You provide insights based on historical data and market trends.
+You are The Retrocasual, a strategic analyst who works with historical patterns in both crypto and sports. For crypto: You analyze past performance and market cycles to understand current token behavior and predict future outcomes. For sports: You analyze historical matchups, team performance trends, and seasonal patterns to predict match outcomes and betting opportunities. You provide insights based on historical data and market trends or sports performance patterns.
 
 RESPONSE STYLE: Keep responses SHORT and PRECISE - maximum 2-3 sentences. Be direct and to the point.`;
 
@@ -99,6 +108,12 @@ RESPONSE STYLE: Keep responses SHORT and PRECISE - maximum 2-3 sentences. Be dir
     if (!tokenData) return '';
 
     console.log('🔍 Parsing token data for AI context:', tokenData);
+    
+    // Check if this is sports fixture data
+    if (this.isSportsFixture(tokenData)) {
+      return this.parseSportsFixtureData(tokenData);
+    }
+    
     const context = [];
     
     // Basic token info
@@ -285,6 +300,77 @@ ${context.join('\n')}
 Use this comprehensive market data to provide clear, technical analysis and trading insights. You have access to real-time data across multiple timeframes (5m, 1h, 6h, 24h) including price movements, volume patterns, liquidity depth, holder distribution, dev holding percentage, and market confidence. Reference the specific numbers and metrics in your analysis.`;
     
     console.log('📝 Generated AI context:', finalContext);
+    return finalContext;
+  }
+
+  // Check if data is a sports fixture
+  private isSportsFixture(data: any): boolean {
+    // Check for sports-specific properties
+    return !!(data.league || data.status || data.venue || data.currentScore || data.finalScore || 
+              (data.mint && (data.mint.startsWith('sports-') || data.mint.startsWith('soccer-') || 
+               data.mint.startsWith('nba-') || data.mint.startsWith('boxing-') || 
+               data.mint.startsWith('formula1-') || data.mint.startsWith('nascar-') || 
+               data.mint.startsWith('tennis-') || data.mint.startsWith('nfl-') || 
+               data.mint.startsWith('mma-'))));
+  }
+
+  // Parse sports fixture data for AI context
+  private parseSportsFixtureData(fixture: any): string {
+    const context = [];
+    
+    // Match details
+    if (fixture.name) context.push(`Match: ${fixture.name}`);
+    if (fixture.league) context.push(`League: ${fixture.league}`);
+    if (fixture.status) context.push(`Status: ${fixture.status}`);
+    
+    // Scores
+    if (fixture.currentScore) context.push(`Current Score: ${fixture.currentScore}`);
+    if (fixture.finalScore) context.push(`Final Score: ${fixture.finalScore}`);
+    
+    // Match timing
+    if (fixture.scheduledTime) {
+      const scheduledDate = new Date(fixture.scheduledTime);
+      context.push(`Scheduled: ${scheduledDate.toLocaleString()}`);
+    }
+    if (fixture.clock) context.push(`Clock: ${fixture.clock}`);
+    
+    // Venue and details
+    if (fixture.venue) context.push(`Venue: ${fixture.venue}`);
+    if (fixture.referee) context.push(`Referee: ${fixture.referee}`);
+    
+    // Key players
+    if (fixture.keyPlayers && Array.isArray(fixture.keyPlayers) && fixture.keyPlayers.length > 0) {
+      context.push(`Key Players: ${fixture.keyPlayers.join(', ')}`);
+    }
+    
+    // Period scores
+    if (fixture.periodScores && Array.isArray(fixture.periodScores) && fixture.periodScores.length > 0) {
+      context.push(`Period Scores: ${fixture.periodScores.join(', ')}`);
+    }
+    
+    // Cards/penalties
+    if (fixture.cards && Array.isArray(fixture.cards) && fixture.cards.length > 0) {
+      context.push(`Cards: ${fixture.cards.join(', ')}`);
+    }
+    
+    // Match ID and mint
+    if (fixture.id) context.push(`Match ID: ${fixture.id}`);
+    if (fixture.mint) context.push(`Mint: ${fixture.mint}`);
+    
+    // Last updated
+    if (fixture.updatedAt) {
+      const updatedDate = new Date(fixture.updatedAt);
+      context.push(`Last Updated: ${updatedDate.toLocaleString()}`);
+    }
+    
+    if (context.length === 0) return '';
+    
+    const finalContext = `\nCURRENT SPORTS FIXTURE DATA:
+${context.join('\n')}
+
+Use this sports fixture data to provide betting predictions, score predictions, and match analysis. Consider the match status (Upcoming/Live/Ended), team form, venue factors, and historical performance. For upcoming matches, provide predictions. For live matches, adjust predictions based on current state. For ended matches, analyze the outcome and performance.`;
+    
+    console.log('🏆 Generated sports AI context:', finalContext);
     return finalContext;
   }
 

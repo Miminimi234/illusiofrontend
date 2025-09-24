@@ -11,6 +11,9 @@ import SocialBadges from './SocialBadges';
 import { serverChatService } from '../utils/serverChatService';
 import { simpleGrokService, ChatMessage } from '../utils/simpleGrokService';
 import { aiForecastService, ForecastData } from '../utils/aiForecastService';
+import { ref, onValue, off, get } from 'firebase/database';
+import { database } from '@/lib/firebase';
+import { useSportsFixtures } from '../hooks/useSportsFixtures';
 
 // Conversation interface
 interface Conversation {
@@ -674,8 +677,6 @@ const TokenCardBase: React.FC<CardProps> = React.memo(({ token, visibleMintsRef,
         }
       }}
       onDrop={handleDrop}
-      onMouseEnter={onHoverEnter}
-      onMouseLeave={onHoverLeave}
       onClick={handleCardClick}
       draggable={false}
     >
@@ -1340,6 +1341,209 @@ function TokenColumn({
   );
 }
 
+// Sports Column Component
+function SportsColumn({ 
+  title, 
+  items, 
+  className = "",
+  visibleMintsRef,
+  onCompanionAttached,
+  agents,
+  newTokenMint,
+  attachedCompanion,
+  onCompanionDetach,
+  onHoverEnter,
+  onHoverLeave,
+  onFocusToken,
+  onDragTargetChange,
+  draggedAgent,
+  filters
+}: { 
+  title: string; 
+  items: any[]; 
+  className?: string;
+  visibleMintsRef: React.MutableRefObject<Set<string>>;
+  onCompanionAttached?: (companionName: string, token: any) => void;
+  agents: Array<{ name: string; videoFile: string }>;
+  newTokenMint: string | null;
+  attachedCompanion: {name: string, tokenMint: string} | null;
+  onCompanionDetach?: () => void;
+  onHoverEnter?: () => void;
+  onHoverLeave?: () => void;
+  onFocusToken?: (token: any) => void;
+  onDragTargetChange?: (token: any | null) => void;
+  draggedAgent?: string | null;
+  filters: any;
+}) {
+
+  return (
+    <div className={`flex flex-col min-w-0 flex-1 relative z-0 ${className}`}>
+      <div className="bg-black/15 p-4 overflow-y-auto overflow-x-visible h-[calc(100vh-180px)] max-h-[calc(100vh-180px)] pb-6">
+        <motion.div 
+          className="flex flex-col gap-2"
+          layout
+        >
+          {items.length === 0 ? (
+            <div className="text-center text-white/40 py-8">
+              <div className="text-2xl mb-2">⚽</div>
+              <div className="text-sm">No fixtures available</div>
+              <div className="text-xs text-white/20 mt-2">Check Firebase connection</div>
+            </div>
+          ) : (
+            <AnimatePresence mode="popLayout">
+              {items.map((match, index) => {
+                const isNewMatch = newTokenMint === match.mint;
+                const companionForMatch = attachedCompanion && attachedCompanion.tokenMint === match.mint ? attachedCompanion.name : null;
+                
+                return (
+                  <motion.div
+                    key={match.id}
+                    layout
+                    initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                    transition={{ duration: 0.3, ease: "easeOut" }}
+                    className={`relative group cursor-pointer transition-all duration-300 hover:scale-[1.02] ${
+                      isNewMatch ? 'ring-2 ring-green-500 ring-opacity-50' : ''
+                    }`}
+                    onClick={() => {
+                      onFocusToken?.(match);
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      onDragTargetChange?.(match);
+                    }}
+                    onDragLeave={() => {
+                      onDragTargetChange?.(null);
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const agentName = e.dataTransfer.getData('text/plain');
+                      if (agentName && onCompanionAttached) {
+                        onCompanionAttached(agentName, match);
+                      }
+                      onDragTargetChange?.(null);
+                    }}
+                  >
+                    <div className={`relative rounded-xl p-3 transition-all duration-300 cursor-pointer hover:scale-[1.02] border ${
+                      match.status === 'Live' ? 'border-red-500/30 bg-red-500/5' :
+                      match.status === 'Upcoming' ? 'border-blue-500/30 bg-blue-500/5' :
+                      match.status === 'Ended' ? 'border-gray-500/30 bg-gray-500/5' :
+                      'border-white/10 bg-white/6'
+                    }`}>
+                      {/* Header row: team logos and match info */}
+                      <div className="flex items-center justify-center">
+                        {/* Home team logo */}
+                        {/* <div className="relative shrink-0 h-10 w-10">
+                          <TeamLogo 
+                            teamName={match.name.split(' vs ')[0] || 'Home Team'}
+                            className="h-10 w-10"
+                            fallbackText="H"
+                          />
+                        </div> */}
+                        
+                        {/* Match info */}
+                        <div className="min-w-0 flex-1 text-center">
+                          <div className="text-blue-400 font-semibold text-xl truncate">
+                            {match.name.split(' vs ').map((part: string, index: number) => (
+                              <span key={index}>
+                                {part}
+                                {index < match.name.split(' vs ').length - 1 && (
+                                  <span className="text-yellow-400"> vs </span>
+                                )}
+                              </span>
+                            ))}
+                          </div>
+                          {/* Status indicator */}
+                          <div className="flex items-center justify-center gap-1 mt-1">
+                            {match.status === 'Live' && (
+                              <>
+                                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+                                <span className="text-xs text-red-400 font-medium">LIVE</span>
+                              </>
+                            )}
+                            {match.status === 'Upcoming' && (
+                              <>
+                                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                                <span className="text-xs text-blue-400 font-medium">UPCOMING</span>
+                              </>
+                            )}
+                            {match.status === 'Ended' && (
+                              <>
+                                <div className="w-2 h-2 rounded-full bg-gray-500"></div>
+                                <span className="text-xs text-gray-400 font-medium">ENDED</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Away team logo */}
+                        {/* <div className="relative shrink-0 h-10 w-10">
+                          <TeamLogo 
+                            teamName={match.name.split(' vs ')[1] || 'Away Team'}
+                            className="h-10 w-10"
+                            fallbackText="A"
+                          />
+                        </div> */}
+                      </div>
+                      
+                      {/* Score/Time row - centered */}
+                      <div className="mt-3 text-center">
+                        {match.status === 'Live' && match.currentScore ? (
+                          <div className="text-3xl font-bold text-green-400">{match.currentScore}</div>
+                        ) : match.status === 'Ended' && (match.finalScore || match.currentScore) ? (
+                          <div className="text-3xl font-bold text-green-400">{match.finalScore || match.currentScore}</div>
+                        ) : match.status === 'Upcoming' && match.scheduledTime ? (
+                          <div className="text-sm text-blue-300">{match.scheduledTime}</div>
+                        ) : match.status === 'Upcoming' && match.clock ? (
+                          <div className="text-sm text-blue-300">Starts {match.clock}</div>
+                        ) : match.status === 'Ended' ? (
+                          <div className="text-sm text-gray-400">Match Ended</div>
+                        ) : null}
+                      </div>
+
+                      {/* League row - centered */}
+                      <div className="mt-3 text-center">
+                        <div className="text-xs text-red-400 uppercase tracking-wider">
+                          {match.league}
+                        </div>
+                      </div>
+
+
+                      {/* Companion Attachment */}
+                      {companionForMatch && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          className="absolute top-2 right-2"
+                        >
+                          <div className="flex items-center gap-1 bg-green-500/20 text-green-400 px-2 py-1 rounded-full text-xs border border-green-500/30">
+                            <span>🤖</span>
+                            <span>{companionForMatch}</span>
+                            <button
+                              onClick={() => onCompanionDetach?.()}
+                              className="p-0.5 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-full transition-all duration-200 hover:scale-110"
+                              title="Remove companion"
+                            >
+                              <svg className="w-3 h-3 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        </motion.div>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          )}
+        </motion.div>
+      </div>
+    </div>
+  );
+}
+
 // InsightCard Component
 function InsightCard({ 
   title, 
@@ -1361,6 +1565,370 @@ function InsightCard({
       </div>
       <div className="border-b border-neutral-800/60 -mx-4 mt-2 mb-3" />
       {children}
+    </div>
+  );
+}
+
+// SportsAIPredictionCard Component
+function SportsAIPredictionCard({ 
+  fixture,
+  className = "" 
+}: { 
+  fixture: any;
+  className?: string; 
+}) {
+  const [prediction, setPrediction] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchPrediction = useCallback(async () => {
+    if (!fixture?.mint) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      console.log(`🤖 Fetching AI prediction for ${fixture.name}`);
+      
+      // Get Grok API key from environment variable
+      const grokApiKey = process.env.NEXT_PUBLIC_GROK_API_KEY;
+      
+      if (!grokApiKey) {
+        throw new Error('Grok API key not configured');
+      }
+      
+      // Import the sports prediction service
+      const { sportsPredictionService } = await import('../utils/sportsPredictionService');
+      
+      // Get prediction from AI service
+      const predictionData = await sportsPredictionService.getSportsPrediction(fixture, grokApiKey);
+      
+      console.log('✅ AI prediction received:', predictionData);
+      setPrediction(predictionData);
+      
+    } catch (error) {
+      console.error('❌ AI prediction error:', error);
+      setError(error instanceof Error ? error.message : 'Failed to get AI prediction');
+      setPrediction(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [fixture]);
+
+  // Fetch prediction when fixture changes
+  useEffect(() => {
+    if (fixture?.mint) {
+      fetchPrediction();
+    } else {
+      setPrediction(null);
+    }
+  }, [fixture?.mint, fetchPrediction]);
+
+  const getConfidenceColor = (confidence: number) => {
+    if (confidence >= 80) return 'text-green-400';
+    if (confidence >= 60) return 'text-yellow-400';
+    if (confidence >= 40) return 'text-orange-400';
+    return 'text-red-400';
+  };
+
+  const getConfidenceBg = (confidence: number) => {
+    if (confidence >= 80) return 'bg-green-500/20 border-green-500/30';
+    if (confidence >= 60) return 'bg-yellow-500/20 border-yellow-500/30';
+    if (confidence >= 40) return 'bg-orange-500/20 border-orange-500/30';
+    return 'bg-red-500/20 border-red-500/30';
+  };
+
+  return (
+    <div className={`group rounded-2xl bg-white/[0.04] hover:bg-white/[0.06] transition-all duration-200 hover:-translate-y-0.5 px-4 py-3 shadow-lg shadow-black/20 hover:shadow-xl hover:shadow-black/30 ${className}`}>
+            {/* Header row */}
+            <div className="flex items-center gap-2 mb-3">
+              <h3 className="uppercase tracking-wider text-sm text-white/70 font-mono">AI Prediction</h3>
+              {loading && (
+                <div className="animate-spin rounded-full h-3 w-3 border-b border-white/60 ml-auto"></div>
+              )}
+            </div>
+      <div className="border-b border-neutral-800/60 -mx-4 mt-2 mb-4" />
+      
+      {error ? (
+        <div className="text-center py-4">
+          <div className="text-red-400 text-sm mb-2">❌ Prediction Error</div>
+          <div className="text-white/60 text-xs">{error}</div>
+          <button 
+            onClick={fetchPrediction}
+            className="mt-2 px-3 py-1 bg-white/10 hover:bg-white/20 text-white/80 hover:text-white rounded text-xs transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      ) : prediction ? (
+        <div className="space-y-4">
+          {/* Game Status Indicator */}
+          <div className="bg-white/5 rounded-lg p-3">
+            <div className="text-white/50 text-xs uppercase tracking-wider mb-2">Game Status</div>
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${
+                prediction.gameStatus === 'upcoming' ? 'bg-blue-500' :
+                prediction.gameStatus === 'live' ? 'bg-red-500 animate-pulse' :
+                'bg-gray-500'
+              }`}></div>
+              <span className="text-white font-semibold capitalize">{prediction.gameStatus}</span>
+            </div>
+          </div>
+
+          {/* Match Prediction - Only for upcoming and live games */}
+          {(prediction.gameStatus === 'upcoming' || prediction.gameStatus === 'live') && prediction.matchPrediction && (
+            <div className="bg-white/5 rounded-lg p-3">
+              <div className="text-white/50 text-xs uppercase tracking-wider mb-2">
+                {prediction.gameStatus === 'live' ? 'Live Match Prediction' : 'Match Prediction'}
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <div className="text-center">
+                  <div className="text-white/60 text-xs">Home</div>
+                  <div className="text-white font-semibold">{prediction.matchPrediction.homeWin}%</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-white/60 text-xs">Draw</div>
+                  <div className="text-white font-semibold">{prediction.matchPrediction.draw}%</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-white/60 text-xs">Away</div>
+                  <div className="text-white font-semibold">{prediction.matchPrediction.awayWin}%</div>
+                </div>
+              </div>
+              <div className="mt-2 text-center">
+                <span className={`text-xs px-2 py-1 rounded-full border ${getConfidenceBg(prediction.matchPrediction.confidence)}`}>
+                  <span className={getConfidenceColor(prediction.matchPrediction.confidence)}>
+                    {prediction.matchPrediction.confidence}% confidence
+                  </span>
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Betting Prediction - Only for upcoming and live games */}
+          {(prediction.gameStatus === 'upcoming' || prediction.gameStatus === 'live') && prediction.bettingPrediction && (
+            <div className="bg-white/5 rounded-lg p-3">
+              <div className="text-white/50 text-xs uppercase tracking-wider mb-2">
+                {prediction.gameStatus === 'live' ? 'Live Betting Prediction' : 'Betting Prediction'}
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-white/80 text-sm">Recommended:</span>
+                  <span className="text-white font-semibold">{prediction.bettingPrediction.recommendedBet}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-white/80 text-sm">Odds:</span>
+                  <span className="text-green-400 font-semibold">{prediction.bettingPrediction.odds}</span>
+                </div>
+                <div className="text-xs text-white/60 mt-2">
+                  {prediction.bettingPrediction.reasoning}
+                </div>
+                <div className="mt-2 text-center">
+                  <span className={`text-xs px-2 py-1 rounded-full border ${getConfidenceBg(prediction.bettingPrediction.confidence)}`}>
+                    <span className={getConfidenceColor(prediction.bettingPrediction.confidence)}>
+                      {prediction.bettingPrediction.confidence}% confidence
+                    </span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Score Prediction - Only for upcoming and live games */}
+          {(prediction.gameStatus === 'upcoming' || prediction.gameStatus === 'live') && prediction.scorePrediction && (
+            <div className="bg-white/5 rounded-lg p-3">
+              <div className="text-white/50 text-xs uppercase tracking-wider mb-2">
+                {prediction.gameStatus === 'live' ? 'Final Score Prediction' : 'Score Prediction'}
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-white">
+                  {prediction.scorePrediction.homeScore} - {prediction.scorePrediction.awayScore}
+                </div>
+                <div className="mt-1">
+                  <span className={`text-xs px-2 py-1 rounded-full border ${getConfidenceBg(prediction.scorePrediction.confidence)}`}>
+                    <span className={getConfidenceColor(prediction.scorePrediction.confidence)}>
+                      {prediction.scorePrediction.confidence}% confidence
+                    </span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Game Summary - Only for ended games */}
+          {prediction.gameStatus === 'ended' && prediction.gameSummary && (
+            <div className="bg-white/5 rounded-lg p-3">
+              <div className="text-white/50 text-xs uppercase tracking-wider mb-2">Game Summary</div>
+              <div className="space-y-3">
+                <div>
+                  <div className="text-white/60 text-xs mb-1">Performance:</div>
+                  <div className="text-sm text-white/80">{prediction.gameSummary.performance}</div>
+                </div>
+                {prediction.gameSummary.keyMoments && prediction.gameSummary.keyMoments.length > 0 && (
+                  <div>
+                    <div className="text-white/60 text-xs mb-1">Key Moments:</div>
+                    {prediction.gameSummary.keyMoments.map((moment: string, index: number) => (
+                      <div key={index} className="text-xs text-white/70">• {moment}</div>
+                    ))}
+                  </div>
+                )}
+                {prediction.gameSummary.standoutPlayers && prediction.gameSummary.standoutPlayers.length > 0 && (
+                  <div>
+                    <div className="text-white/60 text-xs mb-1">Standout Players:</div>
+                    {prediction.gameSummary.standoutPlayers.map((player: string, index: number) => (
+                      <div key={index} className="text-xs text-white/70">• {player}</div>
+                    ))}
+                  </div>
+                )}
+                <div>
+                  <div className="text-white/60 text-xs mb-1">Overall Assessment:</div>
+                  <div className="text-sm text-white/80">{prediction.gameSummary.overallAssessment}</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Analysis - Always shown */}
+          <div className="bg-white/5 rounded-lg p-3">
+            <div className="text-white/50 text-xs uppercase tracking-wider mb-2">Analysis</div>
+            <div className="text-sm text-white/80 mb-2">
+              {prediction.analysis?.prediction || 'No analysis available'}
+            </div>
+            {prediction.analysis?.keyFactors && prediction.analysis.keyFactors.length > 0 && (
+              <div className="space-y-1">
+                <div className="text-white/60 text-xs">Key Factors:</div>
+                {prediction.analysis.keyFactors.map((factor: string, index: number) => (
+                  <div key={index} className="text-xs text-white/70">• {factor}</div>
+                ))}
+              </div>
+            )}
+            <div className="mt-2 text-xs text-white/60">
+              {prediction.analysis?.reasoning || 'No reasoning provided'}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="text-center py-4">
+          <div className="text-white/40 text-sm">Loading AI prediction...</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// SportsInsightsCard Component
+function SportsInsightsCard({ 
+  fixture,
+  className = "" 
+}: { 
+  fixture: any;
+  className?: string; 
+}) {
+  const formatTime = (timeString: string) => {
+    try {
+      const date = new Date(timeString);
+      return date.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+    } catch {
+      return timeString;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Live': return 'text-red-400';
+      case 'Upcoming': return 'text-blue-400';
+      case 'Ended': return 'text-gray-400';
+      default: return 'text-white/70';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'Live': return '🔴';
+      case 'Upcoming': return '🔵';
+      case 'Ended': return '⚫';
+      default: return '⚪';
+    }
+  };
+
+  return (
+    <div className={`group rounded-2xl bg-white/[0.04] hover:bg-white/[0.06] transition-all duration-200 hover:-translate-y-0.5 px-4 py-3 shadow-lg shadow-black/20 hover:shadow-xl hover:shadow-black/30 ${className}`}>
+      {/* Header row */}
+      <div className="flex items-center gap-2 mb-3">
+        <div className="text-lg">{getStatusIcon(fixture.status)}</div>
+        <h3 className="uppercase tracking-wider text-sm text-white/70 font-mono">Match Details</h3>
+      </div>
+      <div className="border-b border-neutral-800/60 -mx-4 mt-2 mb-4" />
+      
+      {/* Match Information */}
+      <div className="space-y-3">
+        {/* Match Name */}
+        <div className="text-center">
+          <h4 className="text-lg font-bold text-white mb-1">{fixture.name}</h4>
+          <div className="text-sm text-blue-400 font-medium">{fixture.league}</div>
+        </div>
+
+        {/* Status and Score */}
+        <div className="text-center">
+          <div className={`text-sm font-semibold ${getStatusColor(fixture.status)} mb-2`}>
+            {fixture.status}
+          </div>
+          {(fixture.currentScore || fixture.finalScore) && (
+            <div className="text-2xl font-bold text-green-400">
+              {fixture.currentScore || fixture.finalScore}
+            </div>
+          )}
+        </div>
+
+        {/* Details Grid */}
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          {fixture.clock && (
+            <div className="bg-white/5 rounded-lg p-2">
+              <div className="text-white/50 text-xs uppercase tracking-wider">Clock</div>
+              <div className="text-white font-medium">{fixture.clock}</div>
+            </div>
+          )}
+          
+          {fixture.venue && (
+            <div className="bg-white/5 rounded-lg p-2">
+              <div className="text-white/50 text-xs uppercase tracking-wider">Venue</div>
+              <div className="text-white font-medium">{fixture.venue}</div>
+            </div>
+          )}
+          
+          {fixture.scheduledTime && (
+            <div className="bg-white/5 rounded-lg p-2 col-span-2">
+              <div className="text-white/50 text-xs uppercase tracking-wider">Scheduled Time</div>
+              <div className="text-white font-medium">{formatTime(fixture.scheduledTime)}</div>
+            </div>
+          )}
+          
+          {fixture.updatedAt && (
+            <div className="bg-white/5 rounded-lg p-2 col-span-2">
+              <div className="text-white/50 text-xs uppercase tracking-wider">Last Updated</div>
+              <div className="text-white font-medium">{formatTime(fixture.updatedAt)}</div>
+            </div>
+          )}
+        </div>
+
+        {/* ID and Mint */}
+        <div className="space-y-2 pt-2 border-t border-white/10">
+          <div className="bg-white/5 rounded-lg p-2">
+            <div className="text-white/50 text-xs uppercase tracking-wider">Match ID</div>
+            <div className="text-white/70 font-mono text-xs break-all">{fixture.id}</div>
+          </div>
+          <div className="bg-white/5 rounded-lg p-2">
+            <div className="text-white/50 text-xs uppercase tracking-wider">Mint</div>
+            <div className="text-white/70 font-mono text-xs break-all">{fixture.mint}</div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -2167,6 +2735,15 @@ function InsightsColumn({
               Click on a token to see insights
             </div>
           </div>
+      ) : focusToken.mint && (focusToken.mint.startsWith('sports-') || focusToken.mint.startsWith('soccer-') || focusToken.mint.startsWith('nba-') || focusToken.mint.startsWith('boxing-') || focusToken.mint.startsWith('formula1-') || focusToken.mint.startsWith('nascar-') || focusToken.mint.startsWith('tennis-') || focusToken.mint.startsWith('nfl-') || focusToken.mint.startsWith('mma-')) ? (
+        // Sports Insights
+        <div className="space-y-4">
+          <SportsInsightsCard fixture={focusToken} />
+          {/* Only show AI prediction for live/upcoming matches */}
+          {(focusToken.status === 'Live' || focusToken.status === 'Upcoming') && (
+            <SportsAIPredictionCard fixture={focusToken} />
+          )}
+        </div>
         ) : (
           <div className="space-y-3">
             {/* Selected Token Card */}
@@ -2290,8 +2867,8 @@ function InsightsColumn({
                         <div className="flex items-center space-x-2">
                           <span className="font-semibold">
                             {jupiterData ? 
-                              `$${jupiterData.liquidity.toLocaleString()}` : 
-                              (focusToken.liquidity ? `$${formatMarketcap(focusToken.liquidity)}` : "N/A")
+                              `$${formatNumber(jupiterData.liquidity)}` : 
+                              (focusToken.liquidity ? `$${formatNumber(focusToken.liquidity)}` : "N/A")
                             }
                           </span>
                           {jupiterRefreshing && (
@@ -2613,6 +3190,8 @@ function InsightsColumn({
   );
 }
 
+
+
 // Cache buster: v2.1.0 - Console logs removed
 export const Scope = ({ 
   isOpen, 
@@ -2653,6 +3232,13 @@ export const Scope = ({
   onResetTokens?: () => void;
   isSearchMode?: boolean;
 }) => {
+  // Sports state
+  const [selectedSport, setSelectedSport] = useState<string>('soccer');
+  const [sportsDataType, setSportsDataType] = useState<'fixtures' | 'live'>('fixtures');
+  
+  // Sports fixtures hook
+  const { fixtures: sportsFixtures, isLoading: sportsLoading, error: sportsError, connectionStatus: sportsConnectionStatus } = useSportsFixtures(selectedSport, sportsDataType);
+  
   // Track visible mints for performance optimization
   const visibleMintsRef = useRef<Set<string>>(new Set());
   
@@ -2831,14 +3417,18 @@ export const Scope = ({
   const [isDragging, setIsDragging] = useState(false);
   const [draggedAgent, setDraggedAgent] = useState<string | null>(null);
   
-  // Asset type dropdown state
-  const [assetType, setAssetType] = useState<'crypto' | 'stocks' | 'news' | 'sports'>('crypto');
+  // Asset type state
+  const [assetType, setAssetType] = useState<'crypto' | 'sports'>('crypto');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isSportsDropdownOpen, setIsSportsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const sportsDropdownRef = useRef<HTMLDivElement>(null);
+  
   
   // Stock data state
   const [stockData, setStockData] = useState<any[]>([]);
   const [isLoadingStocks, setIsLoadingStocks] = useState(false);
+  
   
   // Coming soon popup state
   const [showComingSoon, setShowComingSoon] = useState(false);
@@ -2873,6 +3463,23 @@ export const Scope = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isDropdownOpen]);
+
+  // Close sports dropdown when clicking outside
+  useEffect(() => {
+    const handleSportsClickOutside = (event: MouseEvent) => {
+      if (sportsDropdownRef.current && !sportsDropdownRef.current.contains(event.target as Node)) {
+        setIsSportsDropdownOpen(false);
+      }
+    };
+
+    if (isSportsDropdownOpen) {
+      document.addEventListener('mousedown', handleSportsClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleSportsClickOutside);
+    };
+  }, [isSportsDropdownOpen]);
 
   // Fetch company logo using multiple free logo APIs
   const fetchCompanyLogo = async (symbol: string, companyName: string) => {
@@ -3009,13 +3616,14 @@ export const Scope = ({
     }
   }, []);
 
-  // Fetch stock data when stocks are selected
+  // Sports data is now handled by the useSportsWebSocket hook
+
+  // Fetch stock data when stocks are selected (coming soon)
   useEffect(() => {
-    if (assetType === 'stocks' && stockData.length === 0) {
-      console.log('📈 Fetching stock data...');
-      fetchStockData();
-    }
-  }, [assetType, stockData.length, fetchStockData]);
+    // Stock data fetching will be handled when stocks feature is implemented
+  }, []);
+
+  // Sports data is automatically loaded by the useSportsWebSocket hook
   
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -3197,19 +3805,15 @@ export const Scope = ({
     };
 
     // Jupiter API already fetches only fresh tokens, so show all tokens
-    // Show stocks when stocks are selected, otherwise show crypto tokens
-    const allTokens = assetType === 'stocks' 
-      ? stockData.slice(0, 50) // Show real stock data when stocks selected
-      : tokensToFilter.filter(t => t && !isUnwantedToken(t)); // Show all Jupiter tokens (already fresh)
+    // Show crypto tokens for crypto asset type
+    const allTokens = tokensToFilter.filter(t => t && !isUnwantedToken(t)); // Show all Jupiter tokens (already fresh)
     
     // Categorize tokens by age since they're all fresh from Jupiter
     const now = Date.now();
     const oneHourAgo = now - (60 * 60 * 1000);
     const sixHoursAgo = now - (6 * 60 * 60 * 1000);
     
-    const newPairs = assetType === 'stocks' 
-      ? allTokens.slice(0, 50) // Show real stock data when stocks selected
-      : applyCustomFilters(allTokens.filter(t => {
+    const newPairs = applyCustomFilters(allTokens.filter(t => {
         const createdAt = new Date(t.createdAt).getTime();
         return createdAt > oneHourAgo; // Very recent tokens
       }))
@@ -3221,9 +3825,7 @@ export const Scope = ({
       })
       .slice(0, 50);
       
-    const filled = assetType === 'stocks' 
-      ? [] // No active tokens for stocks
-      : applyCustomFilters(allTokens.filter(t => {
+    const filled = applyCustomFilters(allTokens.filter(t => {
         const createdAt = new Date(t.createdAt).getTime();
         return createdAt <= oneHourAgo && createdAt > sixHoursAgo; // 1-6 hours old
       }))
@@ -3238,9 +3840,7 @@ export const Scope = ({
     // EDGE: No tokens on edge - temporarily removed
     const onEdge: any[] = [];
     
-    const curveTokens = assetType === 'stocks' 
-      ? [] // No curve tokens for stocks
-      : applyCustomFilters(allTokens.filter(t => {
+    const curveTokens = applyCustomFilters(allTokens.filter(t => {
         const createdAt = new Date(t.createdAt).getTime();
         return createdAt <= sixHoursAgo; // Older than 6 hours
       }))
@@ -3252,13 +3852,6 @@ export const Scope = ({
       })
       .slice(0, 30);
     
-    // console.log("✅ Filtered tokens:", {
-    //   newPairs: newPairs.length,
-    //   onEdge: onEdge.length, 
-    //   filled: filled.length,
-    //   curveTokens: curveTokens.length,
-    //   total: tokensToFilter.length
-    // });
     return { newPairs, onEdge, filled, curveTokens };
   }, [tokens, assetType, stockData]);
 
@@ -3645,7 +4238,7 @@ export const Scope = ({
 
             {/* Star Button */}
             <HeaderStarButton 
-              tokens={assetType === 'stocks' ? [...tokens, ...stockData] : tokens} 
+              tokens={tokens} 
               onTokenClick={setFocusToken} 
             />
 
@@ -3703,7 +4296,7 @@ export const Scope = ({
             <div className="flex border-b border-neutral-800/60">
               <div className="flex-1 text-center py-4 border-r border-neutral-800/60 relative">
                 <h2 className="text-lg font-bold uppercase tracking-wider text-white">
-                  {showSearchResults ? 'Search Results' : (isSearchMode ? 'Search Result' : (assetType === 'stocks' ? 'Stocks' : assetType === 'news' ? 'News' : 'Fresh Mints'))}
+                  {showSearchResults ? 'Search Results' : (isSearchMode ? 'Search Result' : (assetType === 'sports' ? '' : 'Fresh Mints'))}
                 </h2>
                 
                 {/* Search mode indicator */}
@@ -3720,46 +4313,45 @@ export const Scope = ({
                   </div>
                 )}
                 
+                
+                {/* Asset Type Dropdown */}
                 <div className="absolute top-4 left-2 flex gap-2">
                   <div className="relative" ref={dropdownRef}>
                     <button
-                      onClick={() => {
-                        setIsDropdownOpen(!isDropdownOpen);
-                      }}
-                      className="p-1.5 bg-white/10 hover:bg-white/20 text-white/80 hover:text-white rounded-md border border-white/20 transition-all duration-200"
+                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                      className="px-4 py-2 bg-white/8 hover:bg-white/15 text-white/90 hover:text-white rounded-lg border border-white/15 hover:border-white/25 transition-all duration-200 flex items-center space-x-2 shadow-sm hover:shadow-md"
                     >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                      <span className="text-sm font-semibold">
+                        {assetType === 'crypto' ? 'SOL' : assetType === 'sports' ? 'Sports' : 'Assets'}
+                      </span>
+                      <svg className="w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>
                     </button>
-                  </div>
-                  
-                  {/* Filter Button */}
-                  {assetType === 'crypto' && !isSearchMode && (
-                    <button
-                      onClick={() => setShowFilterPopup(true)}
-                      className="p-1.5 bg-white/10 hover:bg-white/20 text-white/80 hover:text-white rounded-md border border-white/20 transition-all duration-200"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.707A1 1 0 013 7V4z" />
-                      </svg>
-                    </button>
-                  )}
-
-                </div>
                     
                     {isDropdownOpen && (
-                      <div className="absolute top-full left-0 mt-1 bg-black/90 border border-white/20 rounded-md shadow-lg z-50 w-[120px]">
+                      <div className="absolute top-full left-0 mt-2 bg-black/95 backdrop-blur-sm border border-white/20 rounded-lg shadow-xl z-50 w-[160px] overflow-hidden">
                         <button
                           onClick={() => {
                             setAssetType('crypto');
                             setIsDropdownOpen(false);
                           }}
-                          className={`w-full px-3 py-1.5 text-sm font-medium text-left hover:bg-white/10 transition-colors duration-200 ${
-                            assetType === 'crypto' ? 'text-white bg-white/10' : 'text-white/70'
+                          className={`w-full px-4 py-2.5 text-sm font-medium text-left hover:bg-white/10 transition-colors duration-200 border-b border-white/5 ${
+                            assetType === 'crypto' ? 'text-white bg-white/10' : 'text-white/70 hover:text-white'
                           }`}
                         >
                           SOL
+                        </button>
+                        <button
+                          onClick={() => {
+                            setAssetType('sports');
+                            setIsDropdownOpen(false);
+                          }}
+                          className={`w-full px-4 py-2.5 text-sm font-medium text-left hover:bg-white/10 transition-colors duration-200 border-b border-white/5 ${
+                            assetType === 'sports' ? 'text-white bg-white/10' : 'text-white/70 hover:text-white'
+                          }`}
+                        >
+                          Sports
                         </button>
                         <button
                           onClick={() => {
@@ -3767,12 +4359,10 @@ export const Scope = ({
                             setComingSoonType('stocks');
                             setShowComingSoon(true);
                           }}
-                          className={`w-full px-3 py-1.5 text-sm font-medium text-left hover:bg-white/10 transition-colors duration-200 overflow-hidden ${
-                            assetType === 'stocks' ? 'text-white bg-white/10' : 'text-white/70'
-                          }`}
+                          className="w-full px-4 py-2.5 text-sm font-medium text-left hover:bg-white/10 transition-colors duration-200 border-b border-white/5 text-white/70 hover:text-white"
                         >
                           <span>Stocks</span>
-                          <span className="text-sm text-white/50 ml-1">(Coming Soon)</span>
+                          <span className="text-xs text-white/50 ml-1">(Coming Soon)</span>
                         </button>
                         <button
                           onClick={() => {
@@ -3780,29 +4370,90 @@ export const Scope = ({
                             setComingSoonType('news');
                             setShowComingSoon(true);
                           }}
-                          className={`w-full px-3 py-1.5 text-sm font-medium text-left hover:bg-white/10 transition-colors duration-200 overflow-hidden ${
-                            assetType === 'news' ? 'text-white bg-white/10' : 'text-white/70'
-                          }`}
+                          className="w-full px-4 py-2.5 text-sm font-medium text-left hover:bg-white/10 transition-colors duration-200 text-white/70 hover:text-white"
                         >
                           <span>News</span>
-                          <span className="text-sm text-white/50 ml-1">(Coming Soon)</span>
-                        </button>
-                        <button
-                          onClick={() => {
-                            setIsDropdownOpen(false);
-                            setComingSoonType('sports');
-                            setShowComingSoon(true);
-                          }}
-                          className={`w-full px-3 py-1.5 text-sm font-medium text-left hover:bg-white/10 transition-colors duration-200 overflow-hidden ${
-                            assetType === 'sports' ? 'text-white bg-white/10' : 'text-white/70'
-                          }`}
-                        >
-                          <span>Sports</span>
-                          <span className="text-sm text-white/50 ml-1">(Coming Soon)</span>
+                          <span className="text-xs text-white/50 ml-1">(Coming Soon)</span>
                         </button>
                       </div>
                     )}
                   </div>
+                  
+                  {/* Filter Button - show for crypto and sports */}
+                  {assetType === 'crypto' && !isSearchMode && (
+                    <button
+                      onClick={() => setShowFilterPopup(true)}
+                      className="p-2 bg-white/8 hover:bg-white/15 text-white/90 hover:text-white rounded-lg border border-white/15 hover:border-white/25 transition-all duration-200 shadow-sm hover:shadow-md"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.707A1 1 0 013 7V4z" />
+                      </svg>
+                    </button>
+                  )}
+                  
+                  {/* Sports Selection - show for sports */}
+                  {assetType === 'sports' && (
+                    <div className="flex items-center space-x-3">
+                      {/* Sport Type Selection */}
+                      <div className="relative" ref={sportsDropdownRef}>
+                        <button
+                          onClick={() => setIsSportsDropdownOpen(!isSportsDropdownOpen)}
+                          className="px-4 py-2 bg-white/8 hover:bg-white/15 text-white/90 hover:text-white rounded-lg border border-white/15 hover:border-white/25 transition-all duration-200 text-sm font-medium flex items-center space-x-2 shadow-sm hover:shadow-md"
+                        >
+                          <span className="capitalize font-semibold">{selectedSport}</span>
+                          <svg className="w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                        
+                        {isSportsDropdownOpen && (
+                          <div className="absolute top-full left-0 mt-2 bg-black/95 backdrop-blur-sm border border-white/20 rounded-lg shadow-xl z-50 w-[140px] overflow-hidden">
+                            {['soccer', 'nba', 'boxing', 'formula1', 'nascar', 'tennis', 'nfl'].map((sport) => (
+                              <button
+                                key={sport}
+                                onClick={() => {
+                                  setSelectedSport(sport);
+                                  setIsSportsDropdownOpen(false);
+                                }}
+                                className={`w-full px-4 py-2.5 text-sm font-medium text-left hover:bg-white/10 transition-colors duration-200 border-b border-white/5 last:border-b-0 ${
+                                  selectedSport === sport ? 'text-white bg-white/10' : 'text-white/70 hover:text-white'
+                                }`}
+                              >
+                                <span className="capitalize">{sport}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Data Type Selection */}
+                      <div className="flex bg-white/8 rounded-lg border border-white/15 overflow-hidden shadow-sm">
+                        <button
+                          onClick={() => setSportsDataType('fixtures')}
+                          className={`px-4 py-2 text-sm font-medium transition-all duration-200 border-r border-white/10 ${
+                            sportsDataType === 'fixtures' 
+                              ? 'bg-white/20 text-white shadow-sm' 
+                              : 'text-white/70 hover:text-white hover:bg-white/5'
+                          }`}
+                        >
+                          Fixtures
+                        </button>
+                        <button
+                          onClick={() => setSportsDataType('live')}
+                          className={`px-4 py-2 text-sm font-medium transition-all duration-200 ${
+                            sportsDataType === 'live' 
+                              ? 'bg-white/20 text-white shadow-sm' 
+                              : 'text-white/70 hover:text-white hover:bg-white/5'
+                          }`}
+                        >
+                          Live
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  
+                </div>
+              </div>
               <div className="flex-1 text-center py-4 border-r border-neutral-800/60">
                 <h2 className="text-lg font-bold uppercase tracking-wider text-white">Insights</h2>
               </div>
@@ -3813,10 +4464,159 @@ export const Scope = ({
             
             {/* Content Row */}
             <div className="flex">
-              <TokenColumn 
-                title={showSearchResults ? "SEARCH RESULTS" : "FRESH MINTS"} 
-                items={showSearchResults ? searchResults.map(convertJupiterToToken) : filteredTokens.newPairs} 
+              {showSearchResults ? (
+                <TokenColumn 
+                  title="SEARCH RESULTS" 
+                  items={searchResults.map(convertJupiterToToken)} 
                 className="border-r border-neutral-800/60 flex-1 min-w-0"
+                visibleMintsRef={visibleMintsRef}
+                agents={agents}
+                newTokenMint={newTokenMint}
+                attachedCompanion={attachedCompanion}
+                onCompanionDetach={handleCompanionDetach}
+                onHoverEnter={pauseLiveOnHover}
+                onHoverLeave={resumeLiveAfterHover}
+                onFocusToken={setFocusToken}
+                onDragTargetChange={setDragTargetToken}
+                filters={filters}
+                onCompanionAttached={(companionName, token) => {
+                  // Handle companion attachment
+                  handleCompanionAttached(companionName, token);
+                    
+                    // Reset chat state for new agent-token combination
+                    setMessages([]);
+                    setInputMessage('');
+                    
+                    // Create new conversation for token analysis
+                    const newConversation: Conversation = {
+                      id: Date.now().toString(),
+                      title: `${companionName} analyzing ${token.name || token.symbol || 'token'}`,
+                      messages: [],
+                      timestamp: Date.now(),
+                      companionName: companionName,
+                      tokenMint: token.mint
+                    };
+                    setConversationHistory(prev => [newConversation, ...prev.slice(0, 19)]);
+                    setCurrentConversationId(newConversation.id);
+                    // Save to localStorage
+                    localStorage.setItem('scope_conversations', JSON.stringify([newConversation, ...conversationHistory.slice(0, 19)]));
+                    
+                    // Simulate companion analyzing the token
+                    setTimeout(() => {
+                      setTypingCompanion(companionName);
+                      setIsTyping(true);
+                      
+                      // Simulate analysis time
+                      const analysisTime = 3000 + Math.random() * 2000;
+                      
+                      setTimeout(() => {
+                        setIsTyping(false);
+                        setTypingCompanion(null);
+                        
+                        // Add analysis message
+                        const analysisMessage: ChatMessage = {
+                          role: 'assistant',
+                          content: `${companionName}: Analyzed ${token.name || token.symbol || 'this token'}. MC: ${token.marketCap ? `$${formatNumber(token.marketCap)}` : 'N/A'}, Price: ${token.price && typeof token.price === 'number' ? `$${token.price.toFixed(8)}` : 'N/A'}. ${token.is_on_curve ? 'On bonding curve - interesting dynamics!' : 'Standard market behavior.'}`,
+                          timestamp: Date.now()
+                        };
+                        setMessages([analysisMessage]);
+                        
+                        // Update conversation history
+                        setConversationHistory(prev => {
+                          const updated = [...prev];
+                          const currentConvIndex = updated.findIndex(conv => conv.id === newConversation.id);
+                          
+                          if (currentConvIndex !== -1) {
+                            updated[currentConvIndex].messages = [analysisMessage];
+                            // Save to localStorage
+                            localStorage.setItem('scope_conversations', JSON.stringify(updated));
+                          }
+                          return updated;
+                        });
+                      }, analysisTime);
+                    }, 500);
+                  }}
+                  draggedAgent={draggedAgent}
+                />
+              ) : assetType === 'sports' ? (
+                <SportsColumn 
+                  title="SPORTS FIXTURES" 
+                  items={sportsFixtures} 
+                  className="border-r border-neutral-800/60 flex-1 min-w-0"
+                  visibleMintsRef={visibleMintsRef}
+                  agents={agents}
+                  newTokenMint={null}
+                  attachedCompanion={attachedCompanion}
+                  onCompanionDetach={handleCompanionDetach}
+                  onHoverEnter={pauseLiveOnHover}
+                  onHoverLeave={resumeLiveAfterHover}
+                  onFocusToken={setFocusToken}
+                  onDragTargetChange={setDragTargetToken}
+                  filters={filters}
+                  onCompanionAttached={(companionName, fixture) => {
+                    // Handle companion attachment for sports fixtures
+                    handleCompanionAttached(companionName, fixture);
+                    
+                    // Reset chat state for new agent-fixture combination
+                    setMessages([]);
+                    setInputMessage('');
+                    
+                    // Create new conversation for fixture analysis
+                    const newConversation: Conversation = {
+                      id: Date.now().toString(),
+                      title: `${companionName} analyzing ${fixture.name}`,
+                      messages: [],
+                      timestamp: Date.now(),
+                      companionName: companionName,
+                      tokenMint: fixture.id
+                    };
+                    setConversationHistory(prev => [newConversation, ...prev.slice(0, 19)]);
+                    setCurrentConversationId(newConversation.id);
+                    // Save to localStorage
+                    localStorage.setItem('scope_conversations', JSON.stringify([newConversation, ...conversationHistory.slice(0, 19)]));
+                    
+                    // Simulate companion analyzing the fixture
+                    setTimeout(() => {
+                      setTypingCompanion(companionName);
+                      setIsTyping(true);
+                      
+                      // Simulate analysis time
+                      const analysisTime = 3000 + Math.random() * 2000;
+                      
+                      setTimeout(() => {
+                        setIsTyping(false);
+                        setTypingCompanion(null);
+                        
+                        // Add analysis message
+                        const analysisMessage: ChatMessage = {
+                          role: 'assistant',
+                          content: `${companionName}: Analyzing ${fixture.name} in ${fixture.league}. Status: ${fixture.status}. ${fixture.currentScore ? `Current Score: ${fixture.currentScore}` : fixture.finalScore ? `Final Score: ${fixture.finalScore}` : 'Match not started yet.'}${fixture.venue ? ` Venue: ${fixture.venue}` : ''}${fixture.clock ? ` Time: ${fixture.clock}` : ''}`,
+                          timestamp: Date.now()
+                        };
+                        setMessages([analysisMessage]);
+                        
+                        // Update conversation history
+                        setConversationHistory(prev => {
+                          const updated = [...prev];
+                          const currentConvIndex = updated.findIndex(conv => conv.id === newConversation.id);
+                          
+                          if (currentConvIndex !== -1) {
+                            updated[currentConvIndex].messages = [analysisMessage];
+                            // Save to localStorage
+                            localStorage.setItem('scope_conversations', JSON.stringify(updated));
+                          }
+                          return updated;
+                        });
+                      }, analysisTime);
+                    }, 500);
+                  }}
+                  draggedAgent={draggedAgent}
+                />
+              ) : (
+                <TokenColumn 
+                  title="FRESH MINTS" 
+                  items={filteredTokens.newPairs} 
+                  className="border-r border-neutral-800/60 flex-1 min-w-0"
                   visibleMintsRef={visibleMintsRef}
                   agents={agents}
                   newTokenMint={newTokenMint}
@@ -3847,7 +4647,7 @@ export const Scope = ({
                     setConversationHistory(prev => [newConversation, ...prev.slice(0, 19)]);
                     setCurrentConversationId(newConversation.id);
                     // Save to localStorage
-      localStorage.setItem('scope_conversations', JSON.stringify([newConversation, ...conversationHistory.slice(0, 19)]));
+                    localStorage.setItem('scope_conversations', JSON.stringify([newConversation, ...conversationHistory.slice(0, 19)]));
                     
                     // Simulate companion analyzing the token
                     setTimeout(() => {
@@ -3864,7 +4664,7 @@ export const Scope = ({
                         // Add analysis message
                         const analysisMessage: ChatMessage = {
                           role: 'assistant',
-                          content: `${companionName}: Analyzed ${token.name || token.symbol || 'this token'}. MC: ${token.marketCap ? `$${token.marketCap.toLocaleString()}` : 'N/A'}, Price: ${token.price && typeof token.price === 'number' ? `$${token.price.toFixed(8)}` : 'N/A'}. ${token.is_on_curve ? 'On bonding curve - interesting dynamics!' : 'Standard market behavior.'}`,
+                          content: `${companionName}: Analyzed ${token.name || token.symbol || 'this token'}. MC: ${token.marketCap ? `$${formatNumber(token.marketCap)}` : 'N/A'}, Price: ${token.price && typeof token.price === 'number' ? `$${token.price.toFixed(8)}` : 'N/A'}. ${token.is_on_curve ? 'On bonding curve - interesting dynamics!' : 'Standard market behavior.'}`,
                           timestamp: Date.now()
                         };
                         setMessages([analysisMessage]);
@@ -3877,7 +4677,7 @@ export const Scope = ({
                           if (currentConvIndex !== -1) {
                             updated[currentConvIndex].messages = [analysisMessage];
                             // Save to localStorage
-            localStorage.setItem('scope_conversations', JSON.stringify(updated));
+                            localStorage.setItem('scope_conversations', JSON.stringify(updated));
                           }
                           return updated;
                         });
@@ -3886,7 +4686,8 @@ export const Scope = ({
                   }}
                   draggedAgent={draggedAgent}
                 />
-                <InsightsColumn 
+              )}
+              <InsightsColumn 
                   focusToken={focusToken}
                   setFocusToken={setFocusToken}
                   className="border-r border-neutral-800/60 flex-1 min-w-0"
@@ -4546,6 +5347,10 @@ export const Scope = ({
                         <svg className="w-6 h-6 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
                         </svg>
+                      ) : comingSoonType === 'sports' ? (
+                        <svg className="w-6 h-6 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                        </svg>
                       ) : (
                         <svg className="w-6 h-6 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -4554,12 +5359,14 @@ export const Scope = ({
                     </div>
                     <div>
                       <h3 className="text-xl font-semibold text-white">
-                        {comingSoonType === 'stocks' ? 'Stocks Feature' : 'News Feature'}
+                        {comingSoonType === 'stocks' ? 'Stocks Feature' : comingSoonType === 'news' ? 'News Feature' : 'Sports Feature'}
                       </h3>
                       <p className="text-base leading-relaxed text-white/90">
                         {comingSoonType === 'stocks' 
                           ? 'Stocks functionality is currently under development. Stay tuned for exciting updates!'
-                          : 'News functionality is currently under development. Stay tuned for exciting updates!'
+                          : comingSoonType === 'news'
+                          ? 'News functionality is currently under development. Stay tuned for exciting updates!'
+                          : 'Sports functionality is currently under development. Stay tuned for exciting updates!'
                         }
                       </p>
                     </div>

@@ -29,7 +29,7 @@ export default function Page() {
   const [cornerLogoVisible, setCornerLogoVisible] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Solana monitoring - now using Firebase WebSocket
+  // Solana monitoring - using original Firebase WebSocket
   const {
     tokens,
     connectionStatus,
@@ -54,7 +54,7 @@ export default function Page() {
   // Debug logging for state changes
   useEffect(() => {
     console.log("🎯 STATE CHANGED - isScopeOpen:", isScopeOpen, "isNavigationHubOpen:", isNavigationHubOpen, "isOracleHubOpen:", isOracleHubOpen, "isManifestoOpen:", isManifestoOpen);
-    // console.log("🎯 TOKENS STATE:", { tokensCount: tokens.length, loading: solanaLoading, connected: connectionStatus.isConnected });
+    console.log("🎯 SOLANA STATE:", { tokensCount: tokens.length, loading: solanaLoading, connected: connectionStatus.isConnected });
     
     // Track feature usage
     if (isScopeOpen) {

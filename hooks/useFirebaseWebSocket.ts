@@ -76,6 +76,8 @@ export const useFirebaseWebSocket = () => {
       // Reference to the tokens collection in Firebase
       const tokensDatabaseRef = ref(database, 'jupiter_tokens/recent/tokens');
       
+      console.log('🔍 Attempting to connect to Firebase path: jupiter_tokens/recent/tokens');
+      
       // First, try to get initial data
       const snapshot = await get(tokensDatabaseRef);
       
@@ -88,11 +90,14 @@ export const useFirebaseWebSocket = () => {
           lastUpdate: Date.now()
         })) as TokenData[];
         
+        console.log('✅ Found tokens data:', tokensArray.length, 'tokens');
+        
         if (isMountedRef.current) {
           setTokens(tokensArray);
           setLoading(false);
         }
       } else {
+        console.log('⚠️ No tokens data found at jupiter_tokens/recent/tokens');
         // If no data exists, initialize with empty array
         if (isMountedRef.current) {
           setTokens([]);

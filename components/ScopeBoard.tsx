@@ -5,6 +5,31 @@ import { useFirebaseWebSocket, TokenData } from '../hooks/useFirebaseWebSocket';
 
 // TokenData type is now imported from useFirebaseWebSocket hook
 
+// Format numbers with K/M suffixes
+const formatNumber = (value: number | string | null | undefined): string => {
+  // Convert to number and handle invalid values
+  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+  
+  if (numValue === null || numValue === undefined || isNaN(numValue) || typeof numValue !== 'number') {
+    return '—';
+  }
+  
+  // Handle zero values
+  if (numValue === 0) {
+    return '0';
+  }
+  
+  if (numValue >= 1e9) {
+    return (numValue / 1e9).toFixed(1).replace('.0', '') + 'B';
+  } else if (numValue >= 1e6) {
+    return (numValue / 1e6).toFixed(1).replace('.0', '') + 'M';
+  } else if (numValue >= 1e3) {
+    return (numValue / 1e3).toFixed(1).replace('.0', '') + 'K';
+  } else {
+    return numValue.toFixed(0);
+  }
+};
+
 export default function ScopeBoard() {
   const { 
     tokens, 
@@ -160,7 +185,7 @@ function TokenColumn({ title, tokens }: { title: string; tokens: TokenData[] }) 
                   <span className="text-green-400">MC:</span> ${t.mcap ? t.mcap.toLocaleString() : 'N/A'}
                 </div>
                 <div className="text-sm opacity-80">
-                  <span className="text-blue-400">Liquidity:</span> ${t.liquidity ? t.liquidity.toLocaleString() : 'N/A'}
+                  <span className="text-blue-400">Liquidity:</span> ${t.liquidity ? formatNumber(t.liquidity) : 'N/A'}
                 </div>
                 <div className="text-sm opacity-80">
                   <span className="text-purple-400">Vol 24h:</span> ${t.volume24h ? t.volume24h.toLocaleString() : 'N/A'}
